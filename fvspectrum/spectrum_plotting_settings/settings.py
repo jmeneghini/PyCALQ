@@ -20,7 +20,7 @@ alphabetical.update(alphabetical_addp)
 alphabetical.update(alphabetical_addm)
 
 #latex format of all irreps and particles
-latex_format = {'A1g':r"$A_{1g}$", 'F1':r"$F_1$", 'F2':r"$F_2$", 'G': r'$G$', 'G1':r"$G_1$", 'G1g':r"$G_{1g}$", 'G1u':r"$G_{1u}$", 'G2':r"$G_2$", 'Hg':r"$H_{g}$", 'Hu':r"$H_{u}$", 'T1g':r"$T_{1g}$", 'A1u':r"$A_{1u}$", 'A2u':r"$A_{2u}$", 'Eg':r"$E_{g}$", 'Eu':r"$E_{u}$", 'T1u':r"$T_{1u}$", 'T2g':r"$T_{2g}$", 'T2u':r"$T_{2u}$", 'A1':r"$A_1$", 'A2':r"$A_2$", 'B1':r"$B_1$", 'B2':r"$B_2$", 'E':r"$E$"}
+latex_format = {'A1g':r"$A_{1g}$", 'A2g':r"$A_{2g}$", 'F1':r"$F_1$", 'F2':r"$F_2$", 'G': r'$G$', 'G1':r"$G_1$", 'G1g':r"$G_{1g}$", 'G1u':r"$G_{1u}$", 'G2':r"$G_2$", 'Hg':r"$H_{g}$", 'Hu':r"$H_{u}$", 'T1g':r"$T_{1g}$", 'A1u':r"$A_{1u}$", 'A2u':r"$A_{2u}$", 'Eg':r"$E_{g}$", 'Eu':r"$E_{u}$", 'T1u':r"$T_{1u}$", 'T2g':r"$T_{2g}$", 'T2u':r"$T_{2u}$", 'A1':r"$A_1$", 'A2':r"$A_2$", 'B1':r"$B_1$", 'B2':r"$B_2$", 'E':r"$E$"}
 latex_format_addp = {irrep+'p': format[:-1]+"^{+}$" for irrep, format in latex_format.items()}
 latex_format_addm = {irrep+'m': format[:-1]+"^{-}$" for irrep, format in latex_format.items()}
 latex_format.update(latex_format_addp)
