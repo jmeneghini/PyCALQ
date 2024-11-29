@@ -185,8 +185,10 @@ class ProjectDirectoryHandler:
         return os.path.join(self.plot_dir(f"{ptype}s"), f"{corr}_effenergy.{ptype}")
     
     #filename for correlator tmin plot file. Plots spectrum fit results for varying tmins
-    def corr_fit_series_plot_file(self,corr,energy_type, ptype, series_type='tmin'):
-        return os.path.join(self.plot_dir(f"{ptype}s"), f"{corr}_{energy_type}_{series_type}.{ptype}")
+    def corr_fit_series_plot_file(self,corr,energy_type, ptype, series_type='tmin', ratio_tag = ""):
+        if ratio_tag != "":
+            ratio_tag = "_"+ratio_tag
+        return os.path.join(self.plot_dir(f"{ptype}s"), f"{corr}_{energy_type}_{series_type+ratio_tag}.{ptype}")
 
     #filename for latex pdf where all plots and relevant information is gathered
     def summary_file(self, mom=None):
@@ -200,6 +202,12 @@ class ProjectDirectoryHandler:
         if filetag:
             filetag="-"+filetag
         return os.path.join(self.plot_dir(f"{ptype}s"), f"{self.task_name}{filetag}_summary_plot.{ptype}")
+    
+    #filename for plot of the interacting delta energy levels of all spectrum fits grouped by irrep
+    def summary_dElab_plot_file(self, ptype, filetag = ""):
+        if filetag:
+            filetag="-"+filetag
+        return os.path.join(self.plot_dir(f"{ptype}s"), f"{self.task_name}{filetag}_dElab_summary_plot.{ptype}")
     
     #filename for important info for gevp pivot
     def pivot_file(self, rotate_type, tN, t0, tD, run_tag = "", rebin=1, sampling_type=None, channel=None):

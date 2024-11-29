@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import scipy as sp
 import time
+import yaml
 from threading import Thread
 
 import sigmond
@@ -28,6 +29,16 @@ class ProjectInfo(NamedTuple):
   data_files: data_files.DataFiles
   precompute: bool
   latex_compiler: str
+  
+class CompactListDumper(yaml.Dumper):
+    def represent_mapping(self, tag, mapping, flow_style=None):
+        # Outer structures remain block style
+        return super(CompactListDumper, self).represent_mapping(tag, mapping, flow_style=False)
+
+    def represent_list(self, data):
+        # Nested lists are always in flow style
+        return self.represent_sequence('tag:yaml.org,2002:seq', data, flow_style=True)
+
 
 #check that raw data files are real and not within project
 def check_raw_data_files(raw_data_files, project_dir):
@@ -1204,6 +1215,151 @@ def write_channel_plots(operators, plh, create_pickles, create_pdfs, pdh, data=N
 #sort channel based on isospin-strangeness-momentum
 def channel_sort(item):
     return f"{item.isospin}{item.strangeness}{item.psq}"
+
+# probably shouldnt be here but idk
+def get_possible_spectrum_ni_energies(unique_ni_dict, single_hadron_energy_dict, get_sh_operator_func, ref_ecm_energy):
+    spectrum_ni_energies = {}
+    for channel, ni_levels in unique_ni_dict.items():
+        energy_levels_elab = []
+        energy_levels_elab_ref = []
+        for level in ni_levels:
+            ni_total_energy_elab = 0
+            ni_total_energy_elab_err = 0
+            for hadron in level:
+                sh_op = get_sh_operator_func(hadron)
+                ni_total_energy_elab += single_hadron_energy_dict[sh_op.channel][sh_op]['elab'].getFullEstimate()
+                ni_total_energy_elab_err += single_hadron_energy_dict[sh_op.channel][sh_op]['elab'].getSymmetricError()**2
+            ni_total_energy_elab_err = np.sqrt(ni_total_energy_elab_err)
+            energy_levels_elab.append([ni_total_energy_elab,ni_total_energy_elab_err])
+            energy_levels_elab_ref.append([ni_total_energy_elab/ref_ecm_energy,ni_total_energy_elab_err/ref_ecm_energy])
+            
+        spectrum_ni_energies[channel] = {'elab': energy_levels_elab, 'elab_ref': energy_levels_elab_ref}
+    return spectrum_ni_energies
+
+# def construct_Z_matrix(zmags_in_channel):
+#     n = zmags_in_channel['nlevels']
+#     z_matrix = np.zeros((n,n))
+#     # Fill Z matrix with magnitudes
+#     for i in range(n):
+#         for j in range(n):
+#             z_matrix[i, j] = zmags_in_channel['zmags'].get(i, j).getFullEstimate()
+#     print(z_matrix)
+#     return z_matrix # ops x levels
+
+def optimal_per_operator_normalized_assignment(zmags_in_channel, allowed_single_hadrons, get_single_hadrons):
+    # Step 1: Construct Z matrix
+    z_matrix = construct_Z_matrix(zmags_in_channel)
+    n_levels, n_operators = z_matrix.shape  # Levels x Operators
+
+    # Step 2: Normalize Z values per operator
+    normalized_z = np.zeros_like(z_matrix)
+    for j in range(n_operators):
+        max_z = np.max(z_matrix[:, j])
+        if max_z > 0:
+            normalized_z[:, j] = z_matrix[:, j] / max_z
+        else:
+            normalized_z[:, j] = 0.0  # Operator has zero Z values across all levels
+
+    # Step 3: Assign single hadrons to operators
+    ops = zmags_in_channel['ops']
+    single_hadrons = [
+        tuple(get_single_hadrons(
+            op.getBasicLapH().getIDName() if op.isBasicLapH() else op.getGenIrrep().getIDName()
+        )) for op in ops
+    ]
+
+    # Step 4: Build the cost matrix (Levels x Operators)
+    # Negative normalized Z values for maximization
+    cost_matrix = -normalized_z
+
+    # Step 5: Solve the Assignment Problem
+    # If the number of levels and operators are unequal, pad the cost matrix
+    num_rows, num_cols = cost_matrix.shape
+    if num_rows != num_cols:
+        # Pad the cost matrix to make it square
+        size = max(num_rows, num_cols)
+        fill_value = np.max(cost_matrix) + 1e6  # Large positive value for padding
+        padded_cost_matrix = np.full((size, size), fill_value)
+        padded_cost_matrix[:num_rows, :num_cols] = cost_matrix
+    else:
+        padded_cost_matrix = cost_matrix
+
+    # Solve the assignment problem
+    row_ind, col_ind = sp.optimize.linear_sum_assignment(padded_cost_matrix)
+
+    # Extract assignments
+    assignments = []
+    for i, op_idx in zip(row_ind, col_ind):
+        if i < n_levels and op_idx < n_operators:
+            # Assign level i to operator op_idx
+            assignments.append((i, single_hadrons[op_idx]))
+
+    # Sort assignments by level index
+    assignments.sort(key=lambda x: x[0])
+    assigned_single_hadrons = [list(assignment[1]) for assignment in assignments]
+
+    return assigned_single_hadrons
+
+
+def construct_Z_matrix(zmags_in_channel):
+    n_levels = zmags_in_channel['nlevels']
+    ops = zmags_in_channel['ops']
+    n_operators = len(ops)
+    z_matrix = np.zeros((n_levels, n_operators))  # Levels x Operators
+
+    for op_idx in range(n_operators):
+        for level_idx in range(n_levels):
+            z_value = zmags_in_channel['zmags'].get(op_idx, level_idx)
+            if z_value is not None:
+                z_matrix[level_idx, op_idx] = z_value.getFullEstimate()
+            else:
+                z_matrix[level_idx, op_idx] = 0.0  # Or handle missing data appropriately
+    return z_matrix
+
+
+# def greedy_heuristic_for_rot_levels(zmags_in_channel, allowed_single_hadrons, get_single_hadrons):
+#     z_matrix = construct_Z_matrix(zmags_in_channel)
+#     n = z_matrix.shape[0]
+    
+#     # Transpose the matrix for heuristic
+#     z_matrix = z_matrix.T
+
+#     # Get single hadrons for each operator
+#     single_hadrons = [
+#         get_single_hadrons(op.getBasicLapH().getIDName() if op.isBasicLapH() else op.getGenIrrep().getIDName())
+#         for op in zmags_in_channel['ops']
+#     ]
+    
+#     # Ensure that the single hadrons are in the allowed set, if not throw an error
+#     for single_hadron_pair in single_hadrons:
+#         for single_hadron in single_hadron_pair:
+#             if single_hadron not in allowed_single_hadrons:
+#                 raise ValueError(f"Single hadron {single_hadron} is not in the specified set of single hadrons.")
+
+#     # Step 1: Preprocess and group indices by pairs of labels
+#     unique_single_hadrons = list(set(tuple(pair) for pair in single_hadrons)) # Get unique pairs of single hadrons
+#     unique_single_hadrons_map = {label_pair: [] for label_pair in unique_single_hadrons}
+
+#     for j, pair in enumerate(single_hadrons):  # Group operator pairs by label pair
+#         unique_single_hadrons_map[tuple(pair)].append(j)
+
+#     # Step 2: Precompute maximum overlaps per label pair for each rotation level
+#     max_signals = np.full((n, len(unique_single_hadrons)), -np.inf)  # Initialize with -inf
+#     label_index_map = {label_pair: idx for idx, label_pair in enumerate(unique_single_hadrons)}  # Map pairs to indices
+
+#     for label_pair, indices in unique_single_hadrons_map.items():
+#         label_idx = label_index_map[label_pair]
+#         max_signals[:, label_idx] = z_matrix[:, indices].max(axis=1)  # Compute max signal per label pair
+
+#     # Step 3: Find the best label pair for each rotate level
+#     best_label_indices = max_signals.argmax(axis=1)
+#     # final assignment of rotate level i -> ni single hadrons
+#     assignments = [list(unique_single_hadrons[idx]) for idx in best_label_indices]
+
+#     return assignments
+
+
+    
 
 #for processes, updates the iteration of the process index
     #such that the index ip is always less that nnodes

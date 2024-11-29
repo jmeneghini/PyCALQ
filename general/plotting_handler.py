@@ -345,64 +345,71 @@ class PlottingHandler:
         else:
             return plt.ylim((ymin, ymax))
 
-    def summary_plot(self,indexes,levels,errs,xticks, reference=None, thresholds=[], label=None, index=0, ndatasets=1, shift=False, filled = True):
-        """Summary of spectrum plot"""
+    def summary_plot(self, indexes, levels, errs, xticks, reference=None, thresholds=[], 
+                 ni_indexes=[], ni_levels=[], ni_errs=[], label=None, index=0, ndatasets=1, 
+                 shift=False, filled=True):
         indexes = np.array(indexes)
         levels = np.array(levels)
         errs = np.array(errs)
-        shifted_array = shift_levels(indexes,levels,errs)
-        if type(shifted_array)==float:
+        ni_indexes = np.array(ni_indexes)
+        ni_levels = np.array(ni_levels)
+        ni_errs = np.array(ni_errs)
+
+        shifted_array = shift_levels(indexes, levels, errs)
+        if type(shifted_array) == float:
             columns = 1.0
         else:
-            columns = max(shifted_array)-min(shifted_array)+1.0
-        shifted_array = shifted_array/columns/ndatasets
-        shifted_array += index/ndatasets-0.5+0.5/ndatasets
+            columns = max(shifted_array) - min(shifted_array) + 1.0
+        shifted_array = shifted_array / columns / ndatasets
+        shifted_array += index / ndatasets - 0.5 + 0.5 / ndatasets
 
         if filled:
             mfc = psettings.colors[index]
         else:
             mfc = 'white'
-        
-        plt.errorbar(x=indexes+shifted_array, y=levels, yerr=errs,linewidth=0.0, elinewidth=1.5, capsize=5, 
-                     color=psettings.colors[index], marker=psettings.markers[index],mfc=mfc, label=label)
 
-        if index==ndatasets-1:
-            plt.xlim(min(indexes)-1.0,max(indexes)+1.0)
+        plt.errorbar(x=levels, y=indexes + shifted_array, xerr=errs, linewidth=0.0, elinewidth=1.5, capsize=5, 
+                        color=psettings.colors[index], marker=psettings.markers[index], mfc=mfc, label=label)
+
+        # Draw the non-interacting levels
+        for x, y, err in zip(ni_indexes, ni_levels, ni_errs):
+            subset_of_shifted_array = shifted_array[np.where(indexes == x)]
+            plt.fill_betweenx([x + min(subset_of_shifted_array), x + max(subset_of_shifted_array)],
+                                y - err, y + err, color='gray', alpha=0.4)
+            plt.plot([y - err, y + err], 
+                        [x + min(subset_of_shifted_array), x + max(subset_of_shifted_array)], 
+                        color='black', lw=1.0)
+
+        if index == ndatasets - 1:
+            plt.ylim(min(indexes) - 1.0, max(indexes) + 1.0)
             dd = 0.005
             for line in thresholds:
-                plt.axhline(line[1], color="black", ls="--")
+                plt.axvline(line[1], color="black", ls="--")
                 line_label = ""
                 for particle in line[0]:
-                    line_label+=psettings.latex_format[particle]
-                minx,maxx = plt.xlim()
-                miny,maxy = plt.ylim()
-                plt.text(minx+dd*(maxx-minx), line[1]+dd*(maxy-miny), line_label )
-            if len(xticks[0])==2:
-                xticks = [f"{psettings.latex_format[irrep]}({mom})" for (irrep, mom) in xticks]
+                    line_label += psettings.latex_format[particle]
+                minx, maxx = plt.xlim()
+                miny, maxy = plt.ylim()
+                plt.text(line[1] + dd * (maxx - minx), miny + dd * (maxy - miny), line_label)
+
+            if len(xticks[0]) == 2:
+                yticks = [f"{psettings.latex_format[irrep]}({mom})" for (irrep, mom) in xticks]
                 rotation = 0
-            elif len(xticks[0])==3:
-                xticks = [f"{psettings.latex_format[irrep]}({mom}) {level}" for (irrep, mom, level) in xticks]
+            elif len(xticks[0]) == 3:
+                yticks = [f"{psettings.latex_format[irrep]}({mom}) {level}" for (irrep, mom, level) in xticks]
                 rotation = 90
 
-            plt.xticks(list(range(len(xticks))),xticks,size="small", rotation=rotation)
-            if self.latex:
-                if reference:
-                    latex_rest_mass = psettings.latex_format[reference].replace('$',"")
-                    plt.ylabel(rf"$E_{{\textup{{cm}}}}/E_{{{latex_rest_mass}}}$") #change to ref
-                else:
-                    if shift:
-                        plt.ylabel(r"$a_t \delta E_{lab}$") #change to ref
-                    else:
-                        plt.ylabel(r"$a_t E_{\textup{cm}}$") #change to ref
+            plt.yticks(list(range(len(yticks))), yticks, size="small", rotation=rotation)
+
+            latex_rest_mass = psettings.latex_format[reference].replace('$', "")
+
+            if reference:
+                xlabel = rf"$\delta E_{{lab}}/E_{{{latex_rest_mass}}}$" if shift else rf"$E_{{\textup{{cm}}}}/E_{{{latex_rest_mass}}}$"
             else:
-                if reference:
-                    latex_rest_mass = psettings.latex_format[reference].replace('$',"")
-                    plt.ylabel(rf"$E_{{cm}}/E_{{{latex_rest_mass}}}$") #change to ref
-                else:
-                    if shift:
-                        plt.ylabel(r"$a_t \delta E_{lab}$")
-                    else:
-                        plt.ylabel(r"$a_t E_{cm}$")
+                xlabel = r"$a_t \delta E_{lab}$" if shift else r"$a_t E_{\textup{cm}}$"
+
+            plt.xlabel(xlabel)
+
             if label:
                 plt.legend(fontsize=15)
 
