@@ -287,7 +287,7 @@ class PlottingHandler:
             marker_color = psettings.colors[color_index]
         else:
             marker_color = "white"
-
+            
         plt.errorbar(x=np.array(t)+0.05*color_index,y=e,yerr=de, linewidth=0.0, elinewidth=1.5, capsize=5, color=psettings.colors[color_index], 
                      marker=psettings.markers[color_index], label=model, mfc=marker_color)
 
@@ -346,52 +346,112 @@ class PlottingHandler:
             return plt.ylim((ymin, ymax))
 
     def summary_plot(self, indexes, levels, errs, xticks, reference=None, thresholds=[], 
-                 ni_indexes=[], ni_levels=[], ni_errs=[], label=None, index=0, ndatasets=1, 
-                 shift=False, filled=True):
+                        ni_indexes=[], ni_levels=[], ni_errs=[], label=None, index=0, ndatasets=1, 
+                        shift=False, certain_bool_list=[], color_coded=False):
         indexes = np.array(indexes)
         levels = np.array(levels)
         errs = np.array(errs)
         ni_indexes = np.array(ni_indexes)
         ni_levels = np.array(ni_levels)
         ni_errs = np.array(ni_errs)
-
+        
+        # Shift levels for better alignment
         shifted_array = shift_levels(indexes, levels, errs)
-        if type(shifted_array) == float:
+        if isinstance(shifted_array, float):  # Check if shift_levels returns a scalar
             columns = 1.0
         else:
             columns = max(shifted_array) - min(shifted_array) + 1.0
         shifted_array = shifted_array / columns / ndatasets
         shifted_array += index / ndatasets - 0.5 + 0.5 / ndatasets
 
-        if filled:
-            mfc = psettings.colors[index]
-        else:
-            mfc = 'white'
+        # Prepare unique indexes and count occurrences
+        unique_indexes, counts_per_channel = np.unique(indexes, return_counts=True)
+        max_counts = np.max(counts_per_channel)
+        
+        if certain_bool_list == []:
+            certain_bool_list = [True]*len(levels)
 
-        plt.errorbar(x=levels, y=indexes + shifted_array, xerr=errs, linewidth=0.0, elinewidth=1.5, capsize=5, 
-                        color=psettings.colors[index], marker=psettings.markers[index], mfc=mfc, label=label)
+        # Customize markers and error bars
+        cumulative_count = 0
+        for i, (x, y, err) in enumerate(zip(levels, indexes + shifted_array, errs)):
+            # Determine marker and error bar color
+            if color_coded:
+                color = psettings.colors[(i - cumulative_count) % len(psettings.colors)]
+            else:
+                color = psettings.colors[index]
+            
+            efc = color  # Edge face color
+            
+            if not certain_bool_list[i]:
+                color = 'white'
 
-        # Draw the non-interacting levels
-        for x, y, err in zip(ni_indexes, ni_levels, ni_errs):
-            subset_of_shifted_array = shifted_array[np.where(indexes == x)]
-            plt.fill_betweenx([x + min(subset_of_shifted_array), x + max(subset_of_shifted_array)],
-                                y - err, y + err, color='gray', alpha=0.4)
-            plt.plot([y - err, y + err], 
-                        [x + min(subset_of_shifted_array), x + max(subset_of_shifted_array)], 
-                        color='black', lw=1.0)
+            if not shift: # If E_cm, have energies on the y-axis
+                x = indexes[i] + shifted_array[i]
+                y = levels[i]
+                yerr = errs[i]
+                xerr = None
+            else:
+                xerr = errs[i]
+                yerr = None
+
+            # Plot error bars with the same color
+            plt.errorbar(
+                x=x,
+                y=y,
+                xerr=xerr,
+                yerr=yerr,
+                fmt='none',  # No markers in errorbar
+                ecolor=efc,  # Set error bar color
+                elinewidth=1.5,
+                capsize=5,
+                zorder=2,  # Ensure error bars are under markers
+            )
+
+            # Check if moving to the next index group
+            if i - cumulative_count == counts_per_channel[0] - 1:
+                cumulative_count += counts_per_channel[0]
+                counts_per_channel = counts_per_channel[1:]  # Shift to the next group
+
+            # Plot individual marker with scatter
+            plt.scatter(
+                x, y,
+                facecolor=color,  # Marker face color
+                edgecolor=efc,  # Edge face color
+                marker=psettings.markers[index],  # Marker style
+                zorder=3,  # Ensure markers are above error bars
+            )
+        
+        # Add legend for color -> rotate level
+        if color_coded:
+            legend_handles = [
+                patches.Patch(color=psettings.colors[i], label=f"Level {i}") for i in range(max_counts)
+            ]
+            # Add legend to the plot
+            plt.legend(handles=legend_handles, fontsize=15)
+
+        # Draw the non-interacting levels for E_cm
+        if not shift:
+            total_xaxis_len = max(indexes) - min(indexes)
+            index_shift = (total_xaxis_len/len(unique_indexes))/3
+            for x, y, err in zip(ni_indexes, ni_levels, ni_errs):
+                min_index = x - index_shift
+                max_index = x + index_shift
+                plt.fill_between([min_index, max_index],
+                                    y - err, y + err, color='gray', alpha=0.4)
+                plt.plot([min_index, max_index], [y, y], color='black', lw=1.0)
 
         if index == ndatasets - 1:
-            plt.ylim(min(indexes) - 1.0, max(indexes) + 1.0)
-            dd = 0.005
-            for line in thresholds:
-                plt.axvline(line[1], color="black", ls="--")
-                line_label = ""
-                for particle in line[0]:
-                    line_label += psettings.latex_format[particle]
-                minx, maxx = plt.xlim()
-                miny, maxy = plt.ylim()
-                plt.text(line[1] + dd * (maxx - minx), miny + dd * (maxy - miny), line_label)
-
+            if not shift:
+                dd = 0.005
+                for line in thresholds:
+                    plt.axvline(line[1], color="black", ls="--")
+                    line_label = ""
+                    for particle in line[0]:
+                        line_label += psettings.latex_format[particle]
+                    minx, maxx = plt.xlim()
+                    miny, maxy = plt.ylim()
+                    plt.text(line[1] + dd * (maxx - minx), miny + dd * (maxy - miny), line_label)
+                    
             if len(xticks[0]) == 2:
                 yticks = [f"{psettings.latex_format[irrep]}({mom})" for (irrep, mom) in xticks]
                 rotation = 0
@@ -399,16 +459,22 @@ class PlottingHandler:
                 yticks = [f"{psettings.latex_format[irrep]}({mom}) {level}" for (irrep, mom, level) in xticks]
                 rotation = 90
 
-            plt.yticks(list(range(len(yticks))), yticks, size="small", rotation=rotation)
-
             latex_rest_mass = psettings.latex_format[reference].replace('$', "")
 
             if reference:
-                xlabel = rf"$\delta E_{{lab}}/E_{{{latex_rest_mass}}}$" if shift else rf"$E_{{\textup{{cm}}}}/E_{{{latex_rest_mass}}}$"
+                xlabel = rf"$\delta E_{{lab}}/m_{{{latex_rest_mass}}}$" if shift else rf"$E_{{\textup{{cm}}}}/m_{{{latex_rest_mass}}}$"
             else:
                 xlabel = r"$a_t \delta E_{lab}$" if shift else r"$a_t E_{\textup{cm}}$"
 
-            plt.xlabel(xlabel)
+            
+            if not shift: # If E_cm, swap x and y labels
+                plt.ylabel(xlabel)
+                plt.xticks(list(range(len(yticks))), yticks, size="small", rotation=rotation)
+                plt.xlim(min(indexes) - 1.0, max(indexes) + 1.0)       
+            else:
+                plt.xlabel(xlabel)
+                plt.yticks(list(range(len(yticks))), yticks, size="small", rotation=rotation)
+                plt.ylim(min(indexes) - 1.0, max(indexes) + 1.0)      
 
             if label:
                 plt.legend(fontsize=15)
@@ -421,6 +487,15 @@ class PlottingHandler:
         plt.ylabel("$|Z|^2$")
         if opname:
             self.moving_textbox([opname])
+            
+    def plot_ni_level_certainty(self, ni_levels, certainties):
+        """plot of non-interacting levels and their certainty"""
+        plt.bar(range(len(ni_levels)),certainties)
+        plt.xlabel("rotate level")
+        plt.ylabel("Certainty") 
+        # set xticks to have level #\n certainty
+        plt.xticks(range(len(ni_levels)),[f"{i}\n{ni_levels[i][0]}\n{ni_levels[i][1]}" for i in range(len(ni_levels))])
+        
 
     #these pickle can only be opened on same system as it was generated 
     # (they are written with bytes because that was the only it would let me)

@@ -1251,14 +1251,8 @@ def optimal_per_operator_normalized_assignment(zmags_in_channel, allowed_single_
     z_matrix = construct_Z_matrix(zmags_in_channel)
     n_levels, n_operators = z_matrix.shape  # Levels x Operators
 
-    # Step 2: Normalize Z values per operator
-    normalized_z = np.zeros_like(z_matrix)
-    for j in range(n_operators):
-        max_z = np.max(z_matrix[:, j])
-        if max_z > 0:
-            normalized_z[:, j] = z_matrix[:, j] / max_z
-        else:
-            normalized_z[:, j] = 0.0  # Operator has zero Z values across all levels
+    # Step 2: Normalize Z matrix per operator
+    normalized_z = calculate_normalized_Z_matrix(z_matrix)
 
     # Step 3: Assign single hadrons to operators
     ops = zmags_in_channel['ops']
@@ -1316,50 +1310,43 @@ def construct_Z_matrix(zmags_in_channel):
                 z_matrix[level_idx, op_idx] = 0.0  # Or handle missing data appropriately
     return z_matrix
 
+def calculate_normalized_Z_matrix(z_matrix):
+    normalized_z = np.zeros_like(z_matrix)
+    for i in range(z_matrix.shape[0]):
+        row = z_matrix[i, :]
+        normalized_z[i, :] = row / row.max() # normalized by level
+    return normalized_z
 
-# def greedy_heuristic_for_rot_levels(zmags_in_channel, allowed_single_hadrons, get_single_hadrons):
-#     z_matrix = construct_Z_matrix(zmags_in_channel)
-#     n = z_matrix.shape[0]
+def calculate_certainty_metrics(normalized_z, assignments, z_ops):
+    certainty_results = [] 
     
-#     # Transpose the matrix for heuristic
-#     z_matrix = z_matrix.T
+    for level_idx, nis in enumerate(assignments):
+        # Get all ops ids corresponding to current single hadron
+        op_ids = [op_idx for op_idx, op in enumerate(z_ops) if tuple(op) == tuple(nis)]
+        normalized_value = normalized_z[level_idx, op_ids].max()
 
-#     # Get single hadrons for each operator
-#     single_hadrons = [
-#         get_single_hadrons(op.getBasicLapH().getIDName() if op.isBasicLapH() else op.getGenIrrep().getIDName())
-#         for op in zmags_in_channel['ops']
-#     ]
-    
-#     # Ensure that the single hadrons are in the allowed set, if not throw an error
-#     for single_hadron_pair in single_hadrons:
-#         for single_hadron in single_hadron_pair:
-#             if single_hadron not in allowed_single_hadrons:
-#                 raise ValueError(f"Single hadron {single_hadron} is not in the specified set of single hadrons.")
+        # Margin-based certainty
+        alternative_costs = np.delete(normalized_z[level_idx, :], op_ids)
+        next_best_value = np.max(alternative_costs)
+        margin = normalized_value - next_best_value
 
-#     # Step 1: Preprocess and group indices by pairs of labels
-#     unique_single_hadrons = list(set(tuple(pair) for pair in single_hadrons)) # Get unique pairs of single hadrons
-#     unique_single_hadrons_map = {label_pair: [] for label_pair in unique_single_hadrons}
+        # Entropy-based certainty
+        # probs = normalized_z[:, op_idx] / np.sum(normalized_z[:, op_idx])
+        # entropy = -np.sum(probs * np.log(probs + 1e-10))  # Add small value to avoid log(0)
 
-#     for j, pair in enumerate(single_hadrons):  # Group operator pairs by label pair
-#         unique_single_hadrons_map[tuple(pair)].append(j)
+        # Combined certainty (felt this seem to give more reasonable results)
+        combined_certainty = 0.3 * normalized_value + 0.7 * margin
 
-#     # Step 2: Precompute maximum overlaps per label pair for each rotation level
-#     max_signals = np.full((n, len(unique_single_hadrons)), -np.inf)  # Initialize with -inf
-#     label_index_map = {label_pair: idx for idx, label_pair in enumerate(unique_single_hadrons)}  # Map pairs to indices
+        # Store results
+        certainty_results.append({
+            "level": level_idx,
+            "operator": nis,
+            "normalized_value": normalized_value,
+            "margin": margin,
+            "combined_certainty": combined_certainty
+        })
 
-#     for label_pair, indices in unique_single_hadrons_map.items():
-#         label_idx = label_index_map[label_pair]
-#         max_signals[:, label_idx] = z_matrix[:, indices].max(axis=1)  # Compute max signal per label pair
-
-#     # Step 3: Find the best label pair for each rotate level
-#     best_label_indices = max_signals.argmax(axis=1)
-#     # final assignment of rotate level i -> ni single hadrons
-#     assignments = [list(unique_single_hadrons[idx]) for idx in best_label_indices]
-
-#     return assignments
-
-
-    
+    return certainty_results
 
 #for processes, updates the iteration of the process index
     #such that the index ip is always less that nnodes

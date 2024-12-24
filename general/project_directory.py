@@ -223,6 +223,9 @@ class ProjectDirectoryHandler:
     def operator_overlaps_plot(self, op, ptype):
         return os.path.join(self.plot_dir(f"{ptype}s"), f"{op}_operator_overlaps.{ptype}")
     
+    def ni_level_certainty_plot_file(self, channel, ptype):
+        return os.path.join(self.plot_dir(f"{ptype}s"), f"{channel}_ni_level_certainty.{ptype}")
+    
     #filename for samplings of operator overlaps
     def operator_overlaps_samplings(self, channel = None, rebin=1, sampling_type=None, rotate_type=None, tN=None, t0=None, tD=None, run_tag = ""):
         tag = "operator_overlaps"
