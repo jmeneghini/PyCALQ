@@ -444,13 +444,13 @@ class PlottingHandler:
             if not shift:
                 dd = 0.005
                 for line in thresholds:
-                    plt.axvline(line[1], color="black", ls="--")
+                    plt.axhline(line[1], color="black", ls="--")
                     line_label = ""
                     for particle in line[0]:
                         line_label += psettings.latex_format[particle]
                     minx, maxx = plt.xlim()
                     miny, maxy = plt.ylim()
-                    plt.text(line[1] + dd * (maxx - minx), miny + dd * (maxy - miny), line_label)
+                    plt.text(maxx + dd * (maxx - minx), line[1] + dd (maxy - miny), line_label)
                     
             if len(xticks[0]) == 2:
                 yticks = [f"{psettings.latex_format[irrep]}({mom})" for (irrep, mom) in xticks]
@@ -458,10 +458,9 @@ class PlottingHandler:
             elif len(xticks[0]) == 3:
                 yticks = [f"{psettings.latex_format[irrep]}({mom}) {level}" for (irrep, mom, level) in xticks]
                 rotation = 90
-
-            latex_rest_mass = psettings.latex_format[reference].replace('$', "")
-
+                
             if reference:
+                latex_rest_mass = psettings.latex_format[reference].replace('$', "")
                 xlabel = rf"$\delta E_{{lab}}/m_{{{latex_rest_mass}}}$" if shift else rf"$E_{{\textup{{cm}}}}/m_{{{latex_rest_mass}}}$"
             else:
                 xlabel = r"$a_t \delta E_{lab}$" if shift else r"$a_t E_{\textup{cm}}$"

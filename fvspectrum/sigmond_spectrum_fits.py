@@ -119,7 +119,7 @@ fit_spectrum:
 '''
 
 #for guessing number of hadrons in an operator
-hadron_names = ['N', 'X', 'k', 'S', 'L', 'pi', 'P', 'K'] #common names for fundamental hadrons
+hadron_names = ['N', 'X', 'k', 'S', 'L', 'pi', 'P', 'K', 'Phi', 'Rho'] #common names for fundamental hadrons
 hadron_tags = ['(',"-","["] #common tags used to associate irreps to the common names
 
 #use the above lists to guess number of hadrons in an operator
@@ -462,25 +462,38 @@ class SigmondSpectrumFits:
         #select unqualified channels
         rm_channels = []
         for channel in self.achannels: #remove interacting operators that need to be rotated
-            num_hadrons = 0
-            if self.data_handler.getAveragedOperators(channel)[0].operator_info.isGenIrrep():
-                opname = self.data_handler.getAveragedOperators(channel)[0].operator_info.getGenIrrep().getIDName()
-                num_hadrons = count_hadrons(opname)
-            else: 
-                num_hadrons = self.data_handler.getAveragedOperators(channel)[0].operator_info.getBasicLapH().getNumberOfHadrons()
-
-            if len(self.data_handler.getAveragedOperators(channel))>1 and num_hadrons>1:
+            op_hadron_counts = []
+            for op in self.data_handler.getAveragedOperators(channel):
+                op_info = op.operator_info
+                num_hadrons = 0
+                print(channel, self.data_handler.getAveragedOperators(channel))
+                
+                if op_info.isGenIrrep():
+                    opname = op_info.getGenIrrep().getIDName()
+                    num_hadrons = count_hadrons(opname)
+                else: 
+                    num_hadrons = op_info.getBasicLapH().getNumberOfHadrons()
+                
+                op_hadron_counts.append(num_hadrons)
+                    
+                
+            op_hadron_counts = np.array(op_hadron_counts)
+            print(op_hadron_counts)
+            if len(self.data_handler.getAveragedOperators(channel))>1 and np.all(op_hadron_counts!=1):
                 rm_channels.append(channel)
-            elif num_hadrons>1:
+            elif np.all(op_hadron_counts!=1):
                 # rm_channels.append(channel)
                 self.rchannels.append(channel)
-            elif num_hadrons==1:
+            else:
                 if channel not in self.single_hadron_channels:
                     rm_channels.append(channel)
+                
 
         #remove undesired or unqualified channels
         self.project_handler.remove_averaged_data_channels(rm_channels)
         self.achannels = list(set(self.achannels)-set(rm_channels))
+        
+        print(self.achannels)
 
         #remove single operator channels that were just added to "rotated" channels in if not desired.
         final_channels = sigmond_util.filter_channels( task_configs, self.rchannels)
@@ -537,75 +550,94 @@ class SigmondSpectrumFits:
                 operators = self.data_handler.getChannelOperators(channel)
                 if len(operators):
 
-                    #determine if it is a good channel #move to set up?
-                    op = operators[0]
-                    if len(operators)==1:
-                        intop = op
-                    else:
-                        intop = operator.Operator( channel.getRotatedOp(0) )
-                    if op.operator_info.isBasicLapH():
-                        hadrons = op.operator_info.getBasicLapH().getNumberOfHadrons()
-                    else:
-                        opname = op.operator_info.getGenIrrep().getIDName()
-                        hadrons = count_hadrons(opname) 
-                    single_hadron, _ = self.get_single_hadron(str(intop))
+                    # #determine if it is a good channel #move to set up?
+                    # op = operators[0]
+                    # if len(operators)==1:
+                    #     intop = op
+                    # else:
+                    #     intop = operator.Operator( channel.getRotatedOp(0) )
+                    # if op.operator_info.isBasicLapH():
+                    #     hadrons = op.operator_info.getBasicLapH().getNumberOfHadrons()
+                    # else:
+                    #     opname = op.operator_info.getGenIrrep().getIDName()
+                    #     hadrons = count_hadrons(opname) 
+                    # single_hadron, _ = self.get_single_hadron(str(intop))
+                    
+                    # print(channel, str(intop), hadrons, single_hadron, opname)
 
-                    if single_hadron and hadrons>1:
-                        logging.error(f"Interacting correlator '{intop}' in single_hadrons list.")
-                    elif single_hadron:
-                        mom = channel.psq #instead of list index, use the channel mom^2
+                    # if single_hadron and hadrons>1:
+                    #     logging.error(f"Interacting correlator '{intop}' in single_hadrons list.")
+                    # elif single_hadron:
+                    mom = channel.psq #instead of list index, use the channel mom^2
+                    # if mom==0:
+                    logging.info(f"Fitting channel '{str(channel)}'...")
+                    for i,op in enumerate(operators):
+                        
+                        # determine if a single hadron op
+                        # changed from above since channels may include
+                        # both single hadron and interacting operators
+                        
+                        if op.operator_info.isBasicLapH():
+                            hadrons = op.operator_info.getBasicLapH().getNumberOfHadrons()
+                        else:
+                            opname = op.operator_info.getGenIrrep().getIDName()
+                            hadrons = count_hadrons(opname) 
+                        single_hadron, _ = self.get_single_hadron(str(intop))
+                        
+                        if hadrons != 1:
+                            continue
+                            
+                        #set up single hadron fit
+                        if file_created:
+                            wmode = sigmond.WriteMode.Update
+                        else:
+                            wmode = sigmond.WriteMode.Overwrite
+                            
+                        
+                        
+                        if len(operators)==1:
+                            intop = op
+                        else:
+                            intop = operator.Operator( channel.getRotatedOp(i) )
+                        single_hadron, sh_list_index = self.get_single_hadron(str(intop))
+                        hadron_string = f"{single_hadron}({mom})"
+
+                        if single_hadron in self.other_params['single_hadrons_ratio']:
+                            single_hadron_operators[sigmond_info.ScatteringParticle.create(hadron_string)] = operator.Operator(self.other_params['single_hadrons_ratio'][single_hadron][sh_list_index])
+                        else:
+                            single_hadron_operators[sigmond_info.ScatteringParticle.create(hadron_string)] = operator.Operator(self.other_params['single_hadrons'][single_hadron][sh_list_index])
+                        self.single_hadron_info[f"{single_hadron}({mom})"] = {}
+                        self.single_hadron_info[f"{single_hadron}({mom})"]["mom"] = mom
+
                         # if mom==0:
-                        logging.info(f"Fitting channel '{str(channel)}'...")
-                        for i,op in enumerate(operators):
-                            
-                            #set up single hadron fit
-                            if file_created:
-                                wmode = sigmond.WriteMode.Update
-                            else:
-                                wmode = sigmond.WriteMode.Overwrite
-                            if len(operators)==1:
-                                intop = op
-                            else:
-                                intop = operator.Operator( channel.getRotatedOp(i) )
-                            single_hadron, sh_list_index = self.get_single_hadron(str(intop))
-                            hadron_string = f"{single_hadron}({mom})"
+                        logging.info(f"\tFitting operator '{str(intop)}'...")
+                        if self.default_noninteracting_corr_fit:
+                            this_fit_input = dict(self.default_noninteracting_corr_fit)
+                        else:
+                            this_fit_input = dict(self.default_corr_fit)
+                        if str(intop) in self.other_params['correlator_fits']:
+                            for param, setting in self.other_params['correlator_fits'][str(intop)].items():
+                                this_fit_input[param] = setting
+                            if 'model' in self.other_params['correlator_fits'][str(intop)]:
+                                this_fit_input['model'] = fit_info.FitModel(this_fit_input['model'])
+                                
+                        file = self.single_hadron_fit_params_file(repr(channel))
+                        #do the fit, results stored in self.single_hadron_results and self.tmin_results
+                        self.single_hadron_info[hadron_string]["energy_obs"], self.single_hadron_info[hadron_string]["amp_obs"] = self.do_fits( self.single_hadron_results, channel, intop, 
+                                                                                                                                            this_fit_input, wmode, file, hadrons, self.tmin_results, 
+                                                                                                                                            self.tmax_results)
+                        file_created = True
+                        
+                        #record important info
+                        if self.single_hadron_results[channel][intop]["success"]:
+                            self.single_hadron_info[hadron_string]["ecm"] = self.single_hadron_results[channel][intop]["ecm"].getFullEstimate()
+                            self.single_hadron_info[hadron_string]["ecm_ref"] = self.single_hadron_results[channel][intop]["ecm"].getFullEstimate()
 
-                            if single_hadron in self.other_params['single_hadrons_ratio']:
-                                single_hadron_operators[sigmond_info.ScatteringParticle.create(hadron_string)] = operator.Operator(self.other_params['single_hadrons_ratio'][single_hadron][sh_list_index])
-                            else:
-                                single_hadron_operators[sigmond_info.ScatteringParticle.create(hadron_string)] = operator.Operator(self.other_params['single_hadrons'][single_hadron][sh_list_index])
-                            self.single_hadron_info[f"{single_hadron}({mom})"] = {}
-                            self.single_hadron_info[f"{single_hadron}({mom})"]["mom"] = mom
-
-                            # if mom==0:
-                            logging.info(f"\tFitting operator '{str(intop)}'...")
-                            if self.default_noninteracting_corr_fit:
-                                this_fit_input = dict(self.default_noninteracting_corr_fit)
-                            else:
-                                this_fit_input = dict(self.default_corr_fit)
-                            if str(intop) in self.other_params['correlator_fits']:
-                                for param, setting in self.other_params['correlator_fits'][str(intop)].items():
-                                    this_fit_input[param] = setting
-                                if 'model' in self.other_params['correlator_fits'][str(intop)]:
-                                    this_fit_input['model'] = fit_info.FitModel(this_fit_input['model'])
-                                    
-                            file = self.single_hadron_fit_params_file(repr(channel))
-                            #do the fit, results stored in self.single_hadron_results and self.tmin_results
-                            self.single_hadron_info[hadron_string]["energy_obs"], self.single_hadron_info[hadron_string]["amp_obs"] = self.do_fits( self.single_hadron_results, channel, intop, 
-                                                                                                                                                this_fit_input, wmode, file, hadrons, self.tmin_results, 
-                                                                                                                                                self.tmax_results)
-                            file_created = True
-                            
-                            #record important info
-                            if self.single_hadron_results[channel][intop]["success"]:
-                                self.single_hadron_info[hadron_string]["ecm"] = self.single_hadron_results[channel][intop]["ecm"].getFullEstimate()
-                                self.single_hadron_info[hadron_string]["ecm_ref"] = self.single_hadron_results[channel][intop]["ecm"].getFullEstimate()
-
-                                #if successful fit, add to hdf5
-                                samplings = self.mcobs_handler.getFullAndSamplingValues(self.single_hadron_info[hadron_string]["energy_obs"], 
-                                                                                self.project_handler.project_info.sampling_info.getSamplingMode())
-                                sh_levels.create_dataset(hadron_string,data=np.array(samplings.array()))
-                                sh_levels_written = True
+                            #if successful fit, add to hdf5
+                            samplings = self.mcobs_handler.getFullAndSamplingValues(self.single_hadron_info[hadron_string]["energy_obs"], 
+                                                                            self.project_handler.project_info.sampling_info.getSamplingMode())
+                            sh_levels.create_dataset(hadron_string,data=np.array(samplings.array()))
+                            sh_levels_written = True
 
         logging.info(f"Fit parameters written to {self.single_hadron_fit_params_file()}.")
         if sh_levels_written:
@@ -701,7 +733,6 @@ class SigmondSpectrumFits:
 
                                         #add as ability of choosing between direct fits or ground state for NI level shift calculation
                                         non_interacting_level = [(self.single_hadron_info[particle.replace(str(self.single_hadron_info[particle]["mom"]),'0')]["energy_obs"],self.single_hadron_info[particle]["mom"]) for particle in non_interacting_level]
-                                        print(non_interacting_level)
                                         this_fit_input["non_interacting_level"] = non_interacting_level
                                     except RuntimeError as err:
                                         continue
@@ -1112,19 +1143,21 @@ class SigmondSpectrumFits:
                 processes.append(Process(target=self.summary_spectrum_plot,args=(plh,)))
                 processes[-1].start()
                 ip += 1
-                processes.append(Process(target=self.summary_dElab_spectrum_plot,args=(plh,)))
-                processes[-1].start()
-                ip += 1
-                if self.other_params['summary_plot_max_levels']:
-                    processes.append(Process(target=self.summary_dElab_spectrum_plot,args=(plh, self.other_params['summary_plot_max_levels'],
-                                                                                           True, True)))
+                if self.default_interacting_corr_fit['ratio']:
+                    processes.append(Process(target=self.summary_dElab_spectrum_plot,args=(plh,)))
                     processes[-1].start()
                     ip += 1
+                    if self.other_params['summary_plot_max_levels']:
+                        processes.append(Process(target=self.summary_dElab_spectrum_plot,args=(plh, self.other_params['summary_plot_max_levels'],
+                                                                                            True, True)))
+                        processes[-1].start()
+                        ip += 1
             else:
                 self.summary_spectrum_plot(plh)
-                self.summary_dElab_spectrum_plot(plh)
-                if self.other_params['summary_plot_max_levels']:
-                    self.summary_dElab_spectrum_plot(plh,self.other_params['summary_plot_max_levels'], True, True)
+                if self.default_interacting_corr_fit['ratio']:
+                    self.summary_dElab_spectrum_plot(plh)
+                    if self.other_params['summary_plot_max_levels']:
+                        self.summary_dElab_spectrum_plot(plh,self.other_params['summary_plot_max_levels'], True, True)
                 
         
         all_sim_fit_plots = {}
@@ -1469,10 +1502,13 @@ class SigmondSpectrumFits:
                             # if all_op_overlap_plots[channel]:
                             plh.add_operator_overlaps(files)
                             
-                            ni_levels = self.other_params['non_interacting_levels'][str(channel)]
-                            ni_levels = [[str(x) for x in pair] for pair in ni_levels]
-                            if os.path.exists(self.proj_files_handler.ni_level_certainty_plot_file(str(channel), "pdf")):
-                                plh.add_single_plot(self.proj_files_handler.ni_level_certainty_plot_file(str(channel), "pdf"))
+                            try:
+                                ni_levels = self.other_params['non_interacting_levels'][str(channel)]
+                                ni_levels = [[str(x) for x in pair] for pair in ni_levels]
+                                if os.path.exists(self.proj_files_handler.ni_level_certainty_plot_file(str(channel), "pdf")):
+                                    plh.add_single_plot(self.proj_files_handler.ni_level_certainty_plot_file(str(channel), "pdf"))
+                            except KeyError:
+                                pass
 
             #finalize summary plot
             plh.compile_pdf(self.proj_files_handler.summary_file()) 
@@ -1485,9 +1521,11 @@ class SigmondSpectrumFits:
         # get unique non-interacting levels for each channel for summary plot
         self.other_params['unique_non_interacting_levels'] = {key: [list(item) for item in set(frozenset(inner) for inner in value)]
                                                             for key, value in self.other_params['non_interacting_levels'].items()}
-        ref_ecm_energy = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["ecm"]
-        self.spectrum_ni_dict = sigmond_util.get_possible_spectrum_ni_energies(self.other_params['unique_non_interacting_levels'],
-                                                                            self.single_hadron_results, self.get_sh_operator, ref_ecm_energy)
+        if self.other_params['non_interacting_energy_sums']:
+            ref_ecm_energy = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["ecm"] if self.other_params['reference_particle'] else 1.0
+            self.spectrum_ni_dict = sigmond_util.get_possible_spectrum_ni_energies(self.other_params['unique_non_interacting_levels'],
+                                                                                self.single_hadron_results, self.get_sh_operator, ref_ecm_energy)
+        
         
         if self.other_params['reference_particle']:
             if f"{self.other_params['reference_particle']}(0)" in self.single_hadron_info:
@@ -1498,6 +1536,7 @@ class SigmondSpectrumFits:
                 ni_key = 'elab'
         else:
             energy_key = "ecm"
+
         for i,channel in enumerate(self.interacting_channels):
             levels = []; errs = []
             for op in self.results[channel]:
@@ -1542,6 +1581,8 @@ class SigmondSpectrumFits:
                 energy_key = "dElab_ref"
             else:
                 energy_key = "dElab"
+        else:
+            energy_key = "dElab"
             
         for i,channel in enumerate(self.interacting_channels):
             levels = []; errs = []; elab_results = []; certainties_list = []
@@ -1948,10 +1989,11 @@ class SigmondSpectrumFits:
         sh_priors = {}
         scat_info = []
         if "ratio" in plot:
-            if "non_interacting_level" not in this_fit_input:
-                return
-            if plot["ratio"]:
-                model+="-ratio"
+                if plot["ratio"]:
+                    if "non_interacting_level" not in this_fit_input:
+                        return
+                    else:
+                        model+="-ratio"
         if "sim_fit" in plot:
             if plot["sim_fit"]:
                 model+="-sim"
