@@ -29,6 +29,7 @@ class ProjectInfo(NamedTuple):
   data_files: data_files.DataFiles
   precompute: bool
   latex_compiler: str
+  subtract_vev: bool
   
 class CompactListDumper(yaml.Dumper):
     def represent_mapping(self, tag, mapping, flow_style=None):
@@ -141,11 +142,17 @@ def setup_project(general_params, raw_data_files = []):
     else:
         sampling_info = sigmond.MCSamplingInfo()
 
+    subvev = False
+    if 'subtract_vev' in general_params.keys():
+        if general_params['subtract_vev']:
+            subvev = True
+
+
     datafiles = data_files.DataFiles()
 
     return ProjectInfo( project_dir=general_params['project_dir'], raw_data_dirs=raw_data_files, ensembles_file=ensemble_file_path,
             echo_xml=False, bins_info=bins_info, sampling_info=sampling_info, data_files=datafiles,
-            precompute=True, latex_compiler=None)
+            precompute=True, latex_compiler=None, subtract_vev=subvev)
 
 #check if latex is available on the system
 def set_latex_in_plots(style_import):
@@ -1216,24 +1223,39 @@ def write_channel_plots(operators, plh, create_pickles, create_pdfs, pdh, data=N
 def channel_sort(item):
     return f"{item.isospin}{item.strangeness}{item.psq}"
 
-# probably shouldnt be here but idk
-def get_possible_spectrum_ni_energies(unique_ni_dict, single_hadron_energy_dict, get_sh_operator_func, ref_ecm_energy):
+# TODO: FIX THIS!
+def get_possible_spectrum_ni_energies(unique_ni_dict, interacting_channels_list, single_hadron_energy_dict,
+                                      get_sh_operator_func, lattice_extent, ref_ecm_energy):
     spectrum_ni_energies = {}
+
     for channel, ni_levels in unique_ni_dict.items():
-        energy_levels_elab = []
-        energy_levels_elab_ref = []
+        # get current channel object
+        for channel_obj_it in interacting_channels_list:
+            if str(channel_obj_it) == channel:
+                channel_obj = channel_obj_it
+                break
+        # not in interacting channels, don't include in spectrum
+        try:
+            channel_obj
+        except NameError:
+            continue
+
+        energy_levels_ecm = []
+        energy_levels_ecm_ref = []
         for level in ni_levels:
             ni_total_energy_elab = 0
-            ni_total_energy_elab_err = 0
+            ni_total_energy_lab_err = 0
             for hadron in level:
                 sh_op = get_sh_operator_func(hadron)
                 ni_total_energy_elab += single_hadron_energy_dict[sh_op.channel][sh_op]['elab'].getFullEstimate()
-                ni_total_energy_elab_err += single_hadron_energy_dict[sh_op.channel][sh_op]['elab'].getSymmetricError()**2
-            ni_total_energy_elab_err = np.sqrt(ni_total_energy_elab_err)
-            energy_levels_elab.append([ni_total_energy_elab,ni_total_energy_elab_err])
-            energy_levels_elab_ref.append([ni_total_energy_elab/ref_ecm_energy,ni_total_energy_elab_err/ref_ecm_energy])
+                ni_total_energy_lab_err += single_hadron_energy_dict[sh_op.channel][sh_op]['elab'].getSymmetricError()**2
+            ni_total_energy_ecm = np.sqrt(ni_total_energy_elab**2 - 4*np.pi**2/lattice_extent**2 * channel_obj.psq)
+            ni_total_energy_lab_err = np.sqrt(ni_total_energy_lab_err)
+            ni_total_energy_ecm_err = ni_total_energy_lab_err / (ni_total_energy_ecm) * ni_total_energy_elab
+            energy_levels_ecm.append([ni_total_energy_ecm,ni_total_energy_ecm_err])
+            energy_levels_ecm_ref.append([ni_total_energy_ecm/ref_ecm_energy,ni_total_energy_ecm_err/ref_ecm_energy])
             
-        spectrum_ni_energies[channel] = {'elab': energy_levels_elab, 'elab_ref': energy_levels_elab_ref}
+        spectrum_ni_energies[channel] = {'ecm': energy_levels_ecm, 'ecm_ref': energy_levels_ecm_ref}
     return spectrum_ni_energies
 
 # def construct_Z_matrix(zmags_in_channel):

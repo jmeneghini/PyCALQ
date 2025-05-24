@@ -25,7 +25,7 @@ latex_format_addp = {irrep+'p': format[:-1]+"^{+}$" for irrep, format in latex_f
 latex_format_addm = {irrep+'m': format[:-1]+"^{-}$" for irrep, format in latex_format.items()}
 latex_format.update(latex_format_addp)
 latex_format.update(latex_format_addm)
-latex_format.update({'L': r"$\Lambda$", 'X': r"$\Xi$", 'eta': r"$\eta$", 'N': r'$N$', 'pi':r"$\pi$", 'P':r"$\pi$", 'phi': r"$\eta'$", 'S':r"$\Sigma$", 'k':r"$K$", 'K':r"$K$", 'kb':r"$\bar{K}$"})
+latex_format.update({'L': r"$\Lambda$", 'X': r"$\Xi$", 'eta': r"$\eta$", 'N': r'$N$', 'pi':r"$\pi$", 'P':r"$\pi$", 'phi': r"$\eta'$", 'S':r"$\Sigma$", 'k':r"$K$", 'K':r"$K$", 'kb':r"$\bar{K}$", 'Phi': r"$\phi$", 'Rho': r"$\rho$"})
 
 #sigmond scripts tmin plot end tags
 # tmin_file_tags = {'0.agr':'single-exponential fit','4.agr':'double-exponential fit','8.agr':'geometric fit'}

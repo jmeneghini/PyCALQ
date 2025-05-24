@@ -260,6 +260,9 @@ class SigmondRotateCorrs:
                     rotate_mode = "samplings_all"
                 else:
                     rotate_mode = "bins"
+
+                subtract_vev = False
+
                 task_input.doCorrMatrixRotation(
                     sigmond_info.PivotInfo(pivot_string,norm_time=self.tN,metric_time=self.t0,
                                         diagonalize_time=self.tD,max_condition_number=self.other_params['max_condition_number']),

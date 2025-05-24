@@ -50,6 +50,7 @@ general:
     tweak_ensemble:                     #not required
       omissions: [2000]                 #default []
       rebin: 10                         #default 1
+    subtract_vev: false                 #not required #default false
 ```
 
 Short descriptions of general configs:

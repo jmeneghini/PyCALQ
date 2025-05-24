@@ -68,10 +68,11 @@ class SigmondProjectHandler:
         self.hermitian = True
         self.time_separation = 1
 
-        #these can and will matter but only for special cases. Will need extra care when coding up. 
-        #only coding up if we come across an instance of needing such
-        self.subtract_vev = False
+        self.subtract_vev = self.project_info.subtract_vev
         self.vev_const = 0.0
+
+        #these can and will matter but only for special cases. Will need extra care when coding up.
+        #only coding up if we come across an instance of needing such
         self.effective_energy_type = 0 #0=TimeForward, 1=TimeSymmetric, 2=TimeBackward?
 
     #for a given set of data, manage whether to keep, delete, or search for data

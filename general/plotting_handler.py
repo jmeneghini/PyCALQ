@@ -431,8 +431,8 @@ class PlottingHandler:
 
         # Draw the non-interacting levels for E_cm
         if not shift:
-            total_xaxis_len = max(indexes) - min(indexes)
-            index_shift = (total_xaxis_len/len(unique_indexes))/3
+            total_xaxis_len = max(shifted_array) - min(shifted_array)
+            index_shift = total_xaxis_len / len(unique_indexes) / 2.0
             for x, y, err in zip(ni_indexes, ni_levels, ni_errs):
                 min_index = x - index_shift
                 max_index = x + index_shift
@@ -450,7 +450,7 @@ class PlottingHandler:
                         line_label += psettings.latex_format[particle]
                     minx, maxx = plt.xlim()
                     miny, maxy = plt.ylim()
-                    plt.text(maxx + dd * (maxx - minx), line[1] + dd (maxy - miny), line_label)
+                    plt.text(maxx + dd * (maxx - minx), line[1] + dd * (maxy - miny), line_label)
                     
             if len(xticks[0]) == 2:
                 yticks = [f"{psettings.latex_format[irrep]}({mom})" for (irrep, mom) in xticks]
@@ -474,6 +474,9 @@ class PlottingHandler:
                 plt.xlabel(xlabel)
                 plt.yticks(list(range(len(yticks))), yticks, size="small", rotation=rotation)
                 plt.ylim(min(indexes) - 1.0, max(indexes) + 1.0)      
+
+                # draws a dashed thin vertical line at 0
+                plt.axvline(x=0, color='grey', linestyle='--', linewidth=0.5)
 
             if label:
                 plt.legend(fontsize=15)

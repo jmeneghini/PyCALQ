@@ -12,6 +12,14 @@
          <NTime>48</NTime>
       </EnsembleInfo>
 
+      <EnsembleInfo>
+         <Id>phirho_s20_t48_mp0100_mr0310|5740000|1|20|20|20|48</Id>
+         <NStreams>1</NStreams>
+         <NMeas>5740000</NMeas>
+         <NSpace>20</NSpace>
+         <NTime>48</NTime>
+      </EnsembleInfo>
+
      <EnsembleInfo>
         <Id>clover_s16_t128_ud840_s743</Id>
         <NStreams>1</NStreams>
