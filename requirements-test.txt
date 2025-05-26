@@ -1,0 +1,13 @@
+# Testing dependencies for PyCALQ
+pytest>=6.0.0
+pytest-cov>=2.10.0
+pytest-mock>=3.0.0
+flake8>=3.8.0
+mypy>=0.800
+coverage>=5.0.0
+
+# Additional testing utilities
+h5py>=3.0.0  # For HDF5 file testing
+pandas>=1.0.0  # For data testing
+numpy>=1.18.0  # For numerical testing
+pyyaml>=5.0.0  # For YAML testing 

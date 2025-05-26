@@ -12,13 +12,13 @@ from sigmond_scripts.correlator_data import CorrelatorData
 
 # states the data dependence of all sigmond tasks
 dependencies = {
-    tm.Task.preview_corrs: [],
-    tm.Task.average_corrs: [],
-    tm.Task.rotate_corrs: [tm.Task.average_corrs],
-    tm.Task.fit_spectrum: [tm.Task.average_corrs, tm.Task.rotate_corrs],
-    tm.Task.toy_corrs: [tm.Task.average_corrs]
+    tm.Task.preview: [],
+    tm.Task.average: [],
+    tm.Task.rotate: [tm.Task.average],
+    tm.Task.fit: [tm.Task.average, tm.Task.rotate],
+    tm.Task.toy_corrs: [tm.Task.average]
 }
-raw_data_dependence = [tm.Task.preview_corrs, tm.Task.average_corrs]
+raw_data_dependence = [tm.Task.preview, tm.Task.average]
 
 #three stored correlator types:
     # raw correlators
@@ -200,7 +200,7 @@ class SigmondProjectHandler:
             if self.tasks_present[self.index] in dependencies:
                 clear = True
                 for task in self.tasks_present[self.index+1:]:
-                    if tm.Task.average_corrs in dependencies[task]:
+                    if tm.Task.average in dependencies[task]:
                         clear = False
                 if clear:
                     self.clear_averaged_data()
@@ -210,7 +210,7 @@ class SigmondProjectHandler:
             if self.tasks_present[self.index] in dependencies:
                 clear = True
                 for task in self.tasks_present[self.index+1:]:
-                    if tm.Task.rotate_corrs in dependencies[task]:
+                    if tm.Task.rotate in dependencies[task]:
                         clear = False
                 if clear:
                     self.clear_rotated_data()

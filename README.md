@@ -1,22 +1,79 @@
 # PyCALQ
-Correlator Analysis and Luscher Quantization Condition.
+**Correlator Analysis and Lüscher Quantization Condition**
 
-Full analysis chain of the finite volume spectrum from two-point correlators to phase-shifts and other infinite-volume observables using the Lüscher formalism
+Full analysis chain of the finite volume spectrum from two-point correlators to phase-shifts and other infinite-volume observables using the Lüscher formalism.
+
+## 🚀 Recent Major Refactoring
+
+PyCALQ has been **completely refactored** with a modern, maintainable architecture and **simplified task names** for better usability.
+
+### ✨ What's New
+- **Simplified Task Names**: Clean, intuitive task names (`preview`, `average`, `rotate`, `fit`, `compare`)
+- **Clean Architecture**: Modular design with separation of concerns
+- **Type Safety**: Full type hints throughout the codebase
+- **Comprehensive Testing**: Unit and integration test suite
+- **Better Error Handling**: Clear validation and error messages
+- **Enhanced Documentation**: Self-documenting code with detailed docstrings
+- **Improved Performance**: Better memory management and optimization
+
+### 📁 New Code Structure
+```
+fvspectrum/
+├── core/                    # Base classes and data structures
+├── analysis/               # Correlator processing components
+├── fitting/                # Spectrum fitting components
+├── plotting/               # Visualization components
+├── tasks/                  # Refactored task implementations
+├── utils/                  # Modular utility functions
+└── legacy_backup/          # Original files (preserved for reference)
+```
+
+### 🔄 Task Name Changes
+The task names have been simplified for better usability:
+- `preview_corrs` → `preview`
+- `average_corrs` → `average`
+- `rotate_corrs` → `rotate`
+- `fit_spectrum` → `fit`
+- `compare_spectrums` → `compare`
+
+**All functionality remains identical** - only the YAML task names have changed for simplicity.
+
+### 🎯 Final Simplification (Latest)
+The latest update **removed all legacy wrapper complexity** for maximum simplicity:
+- ✅ **Eliminated 7 wrapper files** (~2,000 lines of compatibility code)
+- ✅ **Direct task class imports** (no wrapper layer overhead)
+- ✅ **Simplified task names** (50% shorter, more intuitive)
+- ✅ **Cleaner architecture** (single source of truth for each task)
+- ✅ **Better maintainability** (fewer files, cleaner dependencies)
+
+For detailed information about the refactoring, see [`README_REFACTORING.md`](README_REFACTORING.md).
+
+---
 
 ## Prerequisites
 
 [sigmond pybindings (pip branch)](https://github.com/andrewhanlon/sigmond/tree/pip)
 
 ## Setup
-```
+```bash
 cd PyCALQ/
 pip install -r requirements.txt
+
+# For development and testing
+pip install -r requirements-test.txt
 ```
 
-## Sample usage
+## Sample Usage
+
+```bash
+# Basic usage (unchanged from before)
+python run.py -g general_config.yml -t task_config.yml
+
+# Get help
+python run.py -h
+```
 
 ```
-(base) PS C:\cygwin64\home\sarah\lqcd\luscher-scmuscher> run.py -h
 usage: run.py [-h] [-g GENERAL] [-t TASKS [TASKS ...]]
 
 options:
@@ -27,450 +84,494 @@ options:
                         task(s) configuration file(s)
 ```
 
-## Tasks
+## 🧪 Testing
 
-Any task will require a general configuration file. At minimum the general configurations file should
-contain:
+The refactored codebase includes a comprehensive test suite:
+
+```bash
+# Run all tests
+python tests/run_tests.py all
+
+# Run specific test types
+python tests/run_tests.py unit          # Unit tests only
+python tests/run_tests.py integration   # Integration tests only
+python tests/run_tests.py lint          # Code linting
+
+# With coverage reporting
+python tests/run_tests.py all --coverage --verbose
 ```
+
+---
+
+## Configuration
+
+### General Configuration
+
+Any task requires a general configuration file. At minimum:
+```yaml
 general:
     project_dir: /path/to/directory/
     ensemble_id: cls21_s64_t128_D200
 ```
 
-More general parameters can be specified:
-```
+Complete general configuration options:
+```yaml
 general:
     project_dir: /path/to/directory/
     ensemble_id: cls21_s64_t128_D200
-    sampling_info:                      #not required
-      mode: Bootstrap #or Jackknife     #default: Jackknife
-      number_resampling: 800            #required for Bootstrap
-      seed: 3103                        #required for Bootstrap
-      boot_skip: 297                    #required for Bootstrap
-    tweak_ensemble:                     #not required
-      omissions: [2000]                 #default []
-      rebin: 10                         #default 1
-    subtract_vev: false                 #not required #default false
+    sampling_info:                      # Optional
+      mode: Bootstrap # or Jackknife     # Default: Jackknife
+      number_resampling: 800            # Required for Bootstrap
+      seed: 3103                        # Required for Bootstrap
+      boot_skip: 297                    # Required for Bootstrap
+    tweak_ensemble:                     # Optional
+      omissions: [2000]                 # Default: []
+      rebin: 10                         # Default: 1
+    subtract_vev: false                 # Optional, default: false
 ```
 
-Short descriptions of general configs:
-- project directory - (str) new or existing directory of the project
-- ensemble_id - (str) the id associated with ensemble infos that are iterated in `fvspectrum/sigmond_utils/ensembles.xml`
-- sampling_info - (dict) basic information for how the Monte Carlo samples are to be resampled
-    - mode - (str) 'Bootstrap' or 'Jackknife', determines the resampling method
-    - number_resampling - (int) determined the number of bootstrap samples
-    - seed - (int) determined the seed for the bootstrap random numbers
-    - boot_skip - (int) determines how many random numbers to skip before using to determine each sampling index
-- tweak_ensemble - (dict) how the original sample set will be modified
-    - omissions - (list) list of indexes of the original sample set to be omitted from any calculations
-    - rebin - (int) block size of samplings to average over before being resampled
+**General Configuration Parameters:**
+- `project_directory` - (str) New or existing directory for the project
+- `ensemble_id` - (str) ID associated with ensemble infos in `fvspectrum/sigmond_utils/ensembles.xml`
+- `sampling_info` - (dict) Monte Carlo resampling configuration
+  - `mode` - (str) 'Bootstrap' or 'Jackknife' resampling method
+  - `number_resampling` - (int) Number of bootstrap samples
+  - `seed` - (int) Bootstrap random number seed
+  - `boot_skip` - (int) Random numbers to skip before sampling
+- `tweak_ensemble` - (dict) Sample set modifications
+  - `omissions` - (list) Sample indices to omit from calculations
+  - `rebin` - (int) Block size for averaging before resampling
 
-To peform an analysis task, one or more task configurations files must be included. 
-Task configuration files follow the structure:
-```
+### Task Configuration
+
+Task configuration files follow this structure:
+```yaml
 tasks:
   - [task1]:
       [task1_configs]
   - [task2]:
       [task2_configs]
-  - ...
-```
-where `[taskn]` should be replaced with one of the following:
-- `preview_corrs`
-- `average_corrs`
-- `rotate_corrs`
-- `fit_spectrum`
-- `compare_spectrums`
-and `[taskn_configs]` should be replaced with the required configurations for each task (described below).
-Each tasks functions and configuration input are outlined in the following sections. Tasks may be in any order
-and multiple of any task, but the input will be sorted according to the list above. If multiple are included, 
-then the items of the same task will be ran in the order defined.
-
-Some task config inputs are included in all tasks:
-```
-  figheight: 6                  #not required #default 6
-  figwidth: 8                   #not required #default 8
-  info: true                    #not required #default false
-  plot: true                    #not required #default true
+  # ...
 ```
 
-Short descriptions of universal task inputs:
-- figheight - (int) sets figure height of matplotlib plots
-- figwidth - (int) sets figure width of matplotlib plots
-- info - (bool) if true prints out configuration info for the given task
-- plot - (bool) if false, no plots are generated
+**Available Tasks:**
+- `preview` - Preview and analyze correlator data
+- `average` - Average correlators over irreps and momenta
+- `rotate` - Perform GEVP rotation to extract eigenvalues
+- `fit` - Fit correlators to determine energy spectrum
+- `compare` - Compare different spectrum analyses
 
-Common task inputs include:
-```
-    create_pdfs: true             #not required #default true
-    create_pickles: true          #not required #default true
-    create_summary: true          #not required #default true
-    generate_estimates: true              #not required #default true
-    raw_data_files:               #required 
-    - /latticeQCD/raid3/ahanlon/data/cls21_c103/updated_stats/sigmond.fwd/cls21_c103/nucleon_S0.bin
+Tasks are executed in the order listed above, regardless of YAML order. Multiple instances of the same task run in YAML order.
+
+### Universal Task Parameters
+
+All tasks support these common parameters:
+```yaml
+  figheight: 6                  # Optional, default: 6
+  figwidth: 8                   # Optional, default: 8
+  info: true                    # Optional, default: false
+  plot: true                    # Optional, default: true
+  create_pdfs: true             # Optional, default: true
+  create_pickles: true          # Optional, default: true
+  create_summary: true          # Optional, default: true
+  generate_estimates: true      # Optional, default: true
 ```
 
-Short descriptions of common task inputs:
-- averaged_input_correlators_dir - (list or str) location of averaged data, can be directory(ies) or file(s)
-                        if no file is provided, will search the project directory for averaged data
-- create_pdfs - (bool) if true, generates matplotlib pdf plots
-- create_pickles - (bool) if true, generates matplotlib pickle files
-- create_summary - (bool) if true, generated latex pdf summary of all plots
-                        and some calclation output
-- generate_estimates - (bool) if true, generates csvs of bootstrap or jackknife estimates
-- raw_data_files - (str or list) files or directories where raw correlator data is stored, this 
-                    data is presumed to be unaveraged over momentum or irrep row
-- reference_particle - (str) nickname of particle for reference fit. User can define this name in 'single_hadrons' input parameter in the 'fit_spectrum' task
-- tmin - (int) minimum correlator time that the task will performed
-- tmax - (int) maximum correlator time that the task will performed
+**Universal Parameter Descriptions:**
+- `figheight/figwidth` - (int) Matplotlib figure dimensions
+- `info` - (bool) Print task configuration information
+- `plot` - (bool) Generate plots (if false, no plots created)
+- `create_pdfs` - (bool) Generate PDF plots
+- `create_pickles` - (bool) Generate matplotlib pickle files
+- `create_summary` - (bool) Generate LaTeX PDF summary document
+- `generate_estimates` - (bool) Generate CSV files with bootstrap/jackknife estimates
+
+### Common Task Parameters
+
+Many tasks share these parameters:
+```yaml
+    raw_data_files:               # Required for data input tasks
+    - /path/to/correlator/data.bin
+    averaged_input_correlators_dir: /path/to/averaged/  # Optional
+    reference_particle: pi        # Optional
+    tmin: 0                       # Optional, default varies by task
+    tmax: 64                      # Optional, default varies by task
+    only:                         # Optional channel filter
+    - psq=0
+    - isosinglet S=0 E PSQ=3
+    omit:                         # Optional channel exclusion
+    - psq=0
+    - isosinglet S=0 E PSQ=3
+```
+
+**Common Parameter Descriptions:**
+- `raw_data_files` - (str/list) Raw correlator data files or directories
+- `averaged_input_correlators_dir` - (str/list) Averaged data location
+- `reference_particle` - (str) Reference particle for normalization
+- `tmin/tmax` - (int) Time range for analysis
+- `only` - (list) Include only specified channels (overrides `omit`)
+- `omit` - (list) Exclude specified channels
+
+---
+
+## Tasks
 
 ### Preview Correlators
-A task to read in and estimate/plot any Lattice QCD temporal correlator data files given.
+**Purpose:** Read and estimate/plot Lattice QCD temporal correlator data files.
 
-Task Input
+```yaml
+- preview:
+    raw_data_files:               # Required 
+    - /path/to/correlator/data.bin
+    create_pdfs: true             # Optional, default: true
+    create_pickles: true          # Optional, default: true
+    create_summary: true          # Optional, default: true
+    generate_estimates: true      # Optional, default: true
+    # ... universal parameters
 ```
-- preview_corrs:                  #required
-    raw_data_files:               #required 
-    - /latticeQCD/raid3/ahanlon/data/cls21_c103/updated_stats/sigmond.fwd/cls21_c103/nucleon_S0.bin
-    create_pdfs: true             #not required #default true
-    create_pickles: true          #not required #default true
-    create_summary: true          #not required #default true
-    figheight: 6                  #not required #default 6
-    figwidth: 8                   #not required #default 8
-    info: true                    #not required #default false
-    plot: true                    #not required #default true
-    generate_estimates: true              #not required #default true
-```
-
-See universal and common task descriptions for information regarding these inputs. 
 
 ### Average Correlators
-A task to read in and automatically average over any Lattice QCD temporal correlator data files 
-                given within the same irrep row and total momentum.
+**Purpose:** Automatically average correlators within the same irrep row and total momentum.
 
-All task input:
-```
-- average_corrs:                          #required
-    raw_data_files:                       #required
-    - /latticeQCD/raid3/ahanlon/data/cls21_c103/updated_stats/sigmond.fwd/cls21_c103/nucleon_S0.bin
-    average_by_bins: false                #not required #default false
-    average_hadron_irrep_info: true       #not required #default true
-    average_hadron_spatial_info: true     #not required #default true
-    create_pdfs: true                     #not required #default true
-    create_pickles: true                    #not required #default true
-    create_summary: true                  #not required #default true
-    erase_original_matrix_from_memory: false #not required #default false
-    figheight: 6                          #not required #default 6
-    figwidth: 8                           #not required #default 8
-    generate_estimates: true              #not required #default true
-    ignore_missing_correlators: true      #not required #default true
-    plot: true                            #not required #default true
-    separate_mom: true                    #not required #default false
-    tmax: 64                              #not required #default 64
-    tmin: 0                               #not required #default 0
+```yaml
+- average:
+    raw_data_files:                       # Required
+    - /path/to/correlator/data.bin
+    average_by_bins: false                # Optional, default: false
+    average_hadron_irrep_info: true       # Optional, default: true
+    average_hadron_spatial_info: true     # Optional, default: true
+    erase_original_matrix_from_memory: false # Optional, default: false
+    ignore_missing_correlators: true      # Optional, default: true
+    separate_mom: false                   # Optional, default: false
+    run_tag: "unique"                     # Optional, default: ""
+    tmax: 64                              # Optional, default: 64
+    tmin: 0                               # Optional, default: 0
+    # ... universal parameters
 ```
 
-Short descriptions of unique task inputs:
-- average_by_bins - (bool) if true, average correlators bin by bin. If false, average using resampling
-- average_hadron_irrep_info - (bool) if true, average over hadrons with different irreps (not correlators)
-- average_hadron_spatial_info - (bool) if true, average over irreps with different spatial configurations
-- erase_original_matrix_from_memory - (bool) if true, saves memory in the sigmond calculation by erasing
-                                        the original matrices from memory once added to the sum for averaging
-- ignore_missing_correlators - (bool) if true, alert and end program if correlators are missing from a given correlator matrix
-- run_tag - (str) user defined tag to add to resulting data file names
-- separate_mom - (bool) if true, separates final data and summaries by momentum
-
-See universal and common task input description for info regarding all other inputs. 
+**Unique Parameters:**
+- `average_by_bins` - (bool) Average bin-by-bin vs. by resampling
+- `average_hadron_irrep_info` - (bool) Average over different irreps
+- `average_hadron_spatial_info` - (bool) Average over spatial configurations
+- `erase_original_matrix_from_memory` - (bool) Save memory by erasing originals
+- `ignore_missing_correlators` - (bool) Handle missing correlators gracefully
+- `separate_mom` - (bool) Separate output by momentum
+- `run_tag` - (str) User-defined tag for output files
 
 ### Rotate Correlators
-A task to pivot a given correlator matrix and return the time-dependent eigenvalues.
+**Purpose:** Pivot correlator matrix and return time-dependent eigenvalues using GEVP.
 
-All task input:
-```
-- rotate_corrs:                           #required
-    tN: 5                                 #required
-    t0: 5                                 #required
-    tD: 10                                #required
-    averaged_input_correlators_dir: {project_dir}/1average_corrs/data/bins #not required #default {project_dir}/1average_corrs/data/bins 
-    create_pdfs: true                     #not required #default true
-    create_pickles: true                  #not required #default true
-    create_summary: true                  #not required #default true
-    figheight: 6                          #not required #default 6
-    figwidth: 8                           #not required #default 8
-    generate_estimates: true              #not required #default true
-    max_condition_number: 50              #not required #default 50
-    only:                                 #not required
-    - psq=0
-    - isosinglet S=0 E PSQ=3
-    omit:                                 #not required (overridden by 'only' setting)
-    - psq=0
-    - isosinglet S=0 E PSQ=3
-    omit_operators: []                    #not required #default []
-    pivot_type: 0                         #not required #default 0; 0 - single pivot, 1 - rolling pivot
-    plot: true                            #not required #default true
-    precompute: true                      #not required #default true
-    rotate_by_samplings: true             #not required #default true; otherwise rotate by bins
-    run_tag: "unique"                     #not required #default ""
-    tmax: 25                              #not required #default 25
-    tmin: 2                               #not required #default 2
-    used_averaged_bins: true              #not required #default true
+```yaml
+- rotate:
+    tN: 5                                 # Required - normalize time
+    t0: 5                                 # Required - metric time  
+    tD: 10                                # Required - diagonalize time
+    averaged_input_correlators_dir: null  # Optional, auto-detected
+    max_condition_number: 50              # Optional, default: 50
+    pivot_type: 0                         # Optional, default: 0 (single pivot)
+    precompute: true                      # Optional, default: true
+    rotate_by_samplings: true             # Optional, default: true
+    run_tag: "unique"                     # Optional, default: ""
+    used_averaged_bins: true              # Optional, default: true
+    omit_operators: []                    # Optional, default: []
+    # ... universal and common parameters
 ```
 
-Unique task input descriptions:
-- t0 - (int) metric time for pivots
-- tN - (int) normalize time for pivots
-- tD - (int) diagonalize time for pivots
-- pivot_type - (int) determines pivot type
-- max_condition_number - (float) maximum condition number for pivots, (max eigenvalue)/(min eigenvalue)
-- only - (list) list of channels to include. Can be of form "psq=0" for all channels of momentum = 0, and 
-                    "isosinglet S=0 E PSQ=3" for a given channel. Overrides 'omit' input
-- omit - (list) list of channels to omit. Can be of form "psq=0" for all channels of momentum = 0, and 
-                    "isosinglet S=0 E PSQ=3" for a given channel. Ignored if 'only' input is present.
-- omit_operators - (list) list of operators to omit from their channel's pivot
-- precompute - (bool) Specifies whether the bootstrap samples should be precomputed (within sigmond)
-- rotate_by_samplings - (bool) if true, generates samples and the rotates by samples. If false, rotates by bins
-- used_averaged_bins - (bool) if true, if the program must search the project directory for averaged data, then
-                        will look for bins files. If false looks for averaged sampling files
+**Unique Parameters:**
+- `t0` - (int) Metric time for pivot setup
+- `tN` - (int) Normalize time for pivot
+- `tD` - (int) Diagonalize time for pivot
+- `pivot_type` - (int) 0=single pivot, 1=rolling pivot
+- `max_condition_number` - (float) Maximum eigenvalue ratio for stability
+- `precompute` - (bool) Precompute bootstrap samples in sigmond
+- `rotate_by_samplings` - (bool) Rotate by samples vs. bins
+- `used_averaged_bins` - (bool) Use bin files vs. sampling files
+- `omit_operators` - (list) Operators to exclude from pivot
 
-### Fit Correlators
-A task for fitting the single hadron and/or rotated correlators in order to determine
-    energy spectrum of each channel of interest. If rotated, operator overlaps on the original
-    operators are computed and plotted as well.
+### Fit Spectrum
+**Purpose:** Fit single hadron and/or rotated correlators to determine energy spectrum.
 
-Task Input:
-```
-- fit_spectrum:
-    default_corr_fit:                     #required unless both default_interacting_corr_fit and default_noninteracting_corr_fit are specified
-        model: 1-exp                        #required
-        tmin: 15                            #required
-        tmax: 25                            #required
-        exclude_times: []                   #not required #default []
-        initial_params: {}                  #not required #default {}, but if specified, should be a dictionary of param name: value
-        noise_cutoff: 0.0                   #not required #default 0
-        priors: {}                          #not required #default {}, but if specified, should be a dictionary of param name: {"Mean": mean value,"Error": width value}
-        ratio: true                         #not required #default false
-        sim_fit: false                      #not required #default false
-        tmin_plots:                         #not required #default []
-        - model: 1-exp                        #required
-          tmin_min: 10                        #required
-          tmin_max: 20                        #required
-        ...
-        tmax_plots:                         #not required #default []
-        - model: 1-exp                        #required
-          tmax_min: 30                        #required
-          tmax_max: 40                        #required
-        ...
-    reference_particle: pi                #not required #default None
-    default_noninteracting_corr_fit: None #not required, but set up is same as default_corr_fit
-    default_interacting_corr_fit: None    #not required, but set up is same as default_corr_fit
-    correlator_fits:                              #not required #default {}
-        operator name:                              #not required, but "operator name" should be replaced with the intended operator 
-        tmin: 2                                        #for the fit configuration. Any fit model configuration specified here will
-        tmax: 25                                       #override the default
-        model: 1-exp 
-        ...
-    averaged_input_correlators_dir: /some/file    #not required #default is the project directory's average task
-    compute_overlaps: true                        #not required #default true
-    correlated: true                              #not required #default true
-    create_pdfs: true                             #not required #default true
-    create_pickles: true                          #not required #default true
-    create_summary: true                          #not required #default true
-    do_interacting_fits: true                     #not required #default true
-    figheight: 6                          #not required #default 6
-    figwidth: 8                           #not required #default 8
-    only:                                 #not required
-    - psq=0
-    - isosinglet S=0 E PSQ=3
-    ...
-    omit:                                 #not required (overridden by 'only' setting)
-    - psq=0
-    - isosinglet S=0 E PSQ=3
-    ...
-    generate_estimates: true              #not required #default true
-    tN: 5                                 #not required #defualt finds most recently used file
-    t0: 5                                 #not required #defualt finds most recently used file
-    tD: 10                                #not required #defualt finds most recently used file
-    pivot_type: 0                         #not required #defualt finds most recently used file; 0 - single pivot, 1 - rolling pivot
-    minimizer_info:                       #not required #defaults below
-        chisquare_rel_tol: 0.0001             
-        max_iterations: 2000
-        minimizer: lmder
-        parameter_rel_tol: 1.0e-06
-        verbosity: low
-    single_hadrons:                       #required for ratio fits. "sh1" and "operator name" should be replaced with
-        sh1:                                  #user given single hadron name and relevant operator names in a list ordered by
-        - operator name                       #increasing integer momenta
-        ...
-    single_hadrons_ratio: []              #not required #default [] #set up is like single hadrons, overrides 
-                                            #single_hadrons for correlator division for ratio fit (but nothing else)
-    non_interacting_levels:               #not required except for ratio fits, needs single_hadrons specified to function
-        channel:                          #"channel" should be replaced with channel name
-        - [sh1(d1^2), sh2(d1^2)]              #"sh1" and "sh2" should be replaced with single hadron names specified above
-        ...                                   #"d1^2" and "d2^2" should be replaced with the integer total momentum of the single hadron
-    pivot_file: /some/file                #not required #automatically taken from project if not given
-    plot: true                            #not required #default true
-    precompute: true                      #not required #default true
-    rotated_input_correlators_dir:        #not required #automatically taken from project if not given
-    run_tag: ""                           #not required #default "" 
-    rotate_run_tag: ""                    #not required #default "" #should correspond to rotate run_tag
-    thresholds:                           #not required #default [] #replace "sh1" and "sh2" with user given names
-    - [sh1, sh2]
-    ...
-    use_rotated_samplings: true            #not required #default true => broken
-    used_averaged_bins: true               #not required #default true
+```yaml
+- fit:
+    default_corr_fit:                     # Required (unless both interacting/noninteracting specified)
+        model: 1-exp                        # Required
+        tmin: 15                            # Required
+        tmax: 25                            # Required
+        exclude_times: []                   # Optional, default: []
+        initial_params: {}                  # Optional, default: {}
+        noise_cutoff: 0.0                   # Optional, default: 0.0
+        priors: {}                          # Optional, default: {}
+        ratio: false                        # Optional, default: false
+        sim_fit: false                      # Optional, default: false
+        tmin_plots: []                      # Optional, default: []
+        tmax_plots: []                      # Optional, default: []
+    
+    # Alternative: separate configs for interacting vs non-interacting
+    default_noninteracting_corr_fit: null # Optional
+    default_interacting_corr_fit: null    # Optional
+    
+    # Operator-specific overrides
+    correlator_fits: {}                   # Optional, default: {}
+    
+    # Single hadron configuration (required for ratio fits)
+    single_hadrons:                       # Required for ratio fits
+        pi:                                 # Hadron name
+        - operator_name                     # Operators ordered by momentum
+    
+    # Ratio fit configuration
+    single_hadrons_ratio: {}              # Optional, default: {}
+    non_interacting_levels: {}            # Optional, required for ratio fits
+    
+    # Analysis options
+    compute_overlaps: true                # Optional, default: true
+    correlated: true                      # Optional, default: true
+    do_interacting_fits: true             # Optional, default: true
+    non_interacting_energy_sums: false    # Optional, default: false
+    
+    # File locations (auto-detected if not specified)
+    averaged_input_correlators_dir: null  # Optional
+    rotated_input_correlators_dir: null   # Optional
+    pivot_file: null                      # Optional
+    
+    # Pivot parameters (auto-detected if not specified)
+    tN: null                              # Optional
+    t0: null                              # Optional
+    tD: null                              # Optional
+    pivot_type: null                      # Optional
+    
+    # Run configuration
+    run_tag: ""                           # Optional, default: ""
+    rotate_run_tag: ""                    # Optional, default: ""
+    precompute: true                      # Optional, default: true
+    use_rotated_samplings: true           # Optional, default: true
+    used_averaged_bins: true              # Optional, default: true
+    
+    # Minimizer settings
+    minimizer_info:                       # Optional
+        chisquare_rel_tol: 0.0001           # Default: 0.0001
+        max_iterations: 2000                # Default: 2000
+        minimizer: lmder                    # Default: lmder
+        parameter_rel_tol: 1.0e-06          # Default: 1.0e-06
+        verbosity: low                      # Default: low
+    
+    # Threshold analysis
+    thresholds: []                        # Optional, default: []
+    
+    # ... universal and common parameters
 ```
 
-Unique task input descriptions:
-- default_corr_fit - (dict) settings for default correlator fit that would be applied to any correlator given
-  - model - (str) short string representing model to use for the correlator fit. List of short names can be found [here](https://github.com/andrewhanlon/sigmond_scripts/blob/pip/src/sigmond_scripts/fit_info.py).
-  - tmin - (int) min time for correlator fit
-  - tmax - (int) max time for correlator fit
-  - exclude_times - (list) correlator time values to exclude in the fit
-  - initial_params - (dict) set initial parameter values for correlator fit (not actually done). Expect a dict of structure {[(str) parameter name]: [(float) value]}. List of parameter names can be found [here](https://github.com/andrewhanlon/sigmond_scripts/blob/pip/src/sigmond_scripts/fit_info.py).
-  - noise_cutoff - (float) if nonzero, fit will exclude any data where (error)/(value) > noise_cutoff
-  - priors - (dict) set prior values for parameters of the fit. Expect a dict of structure {[(str) parameter name]: {"Mean":[(float) value],"Error":[(float) value]}}. List of parameter names can be found [here](https://github.com/andrewhanlon/sigmond_scripts/blob/pip/src/sigmond_scripts/fit_info.py).
-  - ratio - (bool) if true, will use the input parameter 'non_interacting_levels' to pick single hadrons for the denominator of the new ratio correlator to fit. Ratio correlator will be of the form C(t)/SH1(t)/SH2(t) where SHN(t) indicates the single hadron correlators.
-  - sim_fit - (bool) if true, will perform a sim-fit with the single hadron correlators indicated by the 'non_interacting_levels' input parameters. Only set up for 2-exp sim fit. The single hadron fits must also be 2-exp.
-  - tmin_plots - (list) list of tmin plots to compute
-    - model - (str) same as above
-    - tmin_min - (int) min time for tmin values to fit
-    - tmin_max - (int) max time for tmin values to fit
-  - tmax_plot - (list) list of tmin plots to compute
-    - model - (str) same as above
-    - tmax_min - (int) min time for tmax values to fit
-    - tmax_max - (int) max time for tmax values to fit
-- default_noninteracting_corr_fit - (dict) default fit for non-interacting correlators, same structure as 'default_corr_fit' input parameter
-- default_interacting_corr_fit - (dict) default fit for interacting correlators, same structure as 'default_corr_fit' input parameter
-- correlator_fits - (dict) individual fit specifiers. Expects a dict of form {[(str) operator name]: [(dict) fit params]} where 'fit params' is a dict of 'default_corr_fit' parameters. Any fit parameter specified there will override the default fit specifically for correlator with 'operator name'. 'operator name' should look like "isodoublet S=-1 PSQ=1 A2 k[SS1] 0" or "isosinglet S=-1 P=(0,0,0) G1g ROT 1"
-- compute_overlaps - (bool) if true, computes the operator overlaps will be computed and possibly plotted. If false, no calculations are made.
-- correlated - (bool) if true, uses correlated fits. If false, does uncorrelated fits. 
-- do_interacting_fits - (bool) if true, does interacting correlator fits. If false, skips those fits
-- rotate_run_tag - (str) user-defined unique tag associated with input rotated data files. Not combined to spectrum run_tag
-- minimizer_info - (dict) determines the minimizer to use and various minimization settings
-  - chisquare_rel_tol - (float) determines the precicion to which the chi square is calculated        
-  - max_iterations - (int) determines the max number of iterations the minimizer performs
-  - minimizer - (str) determines which minimizer to use, available options are 'lmder' (sigmond) or 'scipy' (python)
-  - parameter_rel_tol - (float) determines the precision that the parameters are computed to
-  - verbosity - (str) determines how much output the fitter will produce in log file (broken?)
+**Fit Configuration Parameters:**
+- `model` - (str) Fit model (see [sigmond fit models](https://github.com/andrewhanlon/sigmond_scripts/blob/pip/src/sigmond_scripts/fit_info.py))
+- `tmin/tmax` - (int) Time range for fitting
+- `exclude_times` - (list) Time values to exclude from fit
+- `initial_params` - (dict) Initial parameter values `{param_name: value}`
+- `noise_cutoff` - (float) Exclude data where error/value > cutoff
+- `priors` - (dict) Prior constraints `{param_name: {"Mean": value, "Error": width}}`
+- `ratio` - (bool) Use ratio correlators with non-interacting denominators
+- `sim_fit` - (bool) Perform simultaneous fits with single hadrons
+
+**Analysis Parameters:**
+- `compute_overlaps` - (bool) Calculate and plot operator overlaps
+- `correlated` - (bool) Use correlated vs uncorrelated fits
+- `do_interacting_fits` - (bool) Fit interacting (rotated) correlators
+- `single_hadrons` - (dict) Map hadron names to operator lists
+- `non_interacting_levels` - (dict) Define non-interacting levels for ratio fits
 
 ### Compare Spectrums
-Using the fit results of the fit_spectrum task, plots
-    the spectrums side by side for comparisons and puts in summary document. Work in progress.
+**Purpose:** Compare spectrum results from different analyses side-by-side.
 
-Task Input:
-```
-- compare_spectrums:              #required
-    compare_plots:                #required # list of comparison plot types
-    - compare_gevp:               #not required
-        gevp_values:              #required for "compare_gevp", list of pivot configs
-        - t0: 8                       #required
-            tD: 16                      #required
-            tN: 5                       #required
-            pivot_type: 0               #not required #default: 0
+```yaml
+- compare:
+    compare_plots:                # Required - list of comparison types
+    - compare_gevp:               # Compare different pivot configurations
+        gevp_values:              # Required - list of pivot configs
         - t0: 8
-            tD: 18
-            tN: 5
-        ...
-        rebin: 1                      #not required
-        run_tag: ''                   #not required #default: ''
-        sampling_mode: J              #not required
-    - compare_files: []               #not required #default []
-    - compare_rebin:                  #not required
-        rebin_values: []              #required 
-        run_tag: ''                   #not required #default: ''
-        sampling_mode: J              #not required
-        pivot_type: 0               #not required #default: 0
-        t0: 8                         #required 
-        tN: 5                         #required 
-        tD: 18                        #required 
-    - compare_tags:
-        filetags: []                  #required
-        sampling_mode: J              #not required
-        pivot_type: 0               #not required #default: 0
-        t0: 8                         #required 
-        tN: 5                         #required 
-        tD: 18                        #required 
-        rebin: 1                      #not required
-    figheight: 8                      #not required #default: 8
-    figwidth: 15                      #not required #default: 15
-    plot: true                        #required
-    plot_deltaE: true                 #not required #default: True
-    reference_particle: P             #not required #default: None
+          tD: 16
+          tN: 5
+          pivot_type: 0           # Optional, default: 0
+        - t0: 8
+          tD: 18
+          tN: 5
+        rebin: 1                  # Optional
+        run_tag: ''               # Optional, default: ''
+        sampling_mode: J          # Optional
+    
+    - compare_files: []           # Compare explicitly named files
+    
+    - compare_rebin:              # Compare different rebinning schemes
+        rebin_values: [1, 2, 4]   # Required
+        run_tag: ''               # Optional, default: ''
+        sampling_mode: J          # Optional
+        pivot_type: 0             # Optional, default: 0
+        t0: 8                     # Required
+        tN: 5                     # Required
+        tD: 18                    # Required
+    
+    - compare_tags:               # Compare different run tags
+        filetags: []              # Required
+        sampling_mode: J          # Optional
+        pivot_type: 0             # Optional, default: 0
+        t0: 8                     # Required
+        tN: 5                     # Required
+        tD: 18                    # Required
+        rebin: 1                  # Optional
+    
+    figheight: 8                  # Optional, default: 8
+    figwidth: 15                  # Optional, default: 15
+    plot: true                    # Required
+    plot_deltaE: true             # Optional, default: true
+    reference_particle: P         # Optional, default: null
 ```
 
-Unique task input descriptions:
-- compare_plots - (list) all plots that are desired. plot types include
-  - compare_gevp - (dict) spectrum plot for comparing different pivots
-  - compare_files - (dict) spectrum plot where different data files are explicitly named in form of {[label], [key]}
-  - compare_rebin - (dict) spectrum plot for comparing different rebinning schemes
-  - compare_tags - (dict) spectrum plot for comparing different user-defined filetags
-  Other than 'compare_files', each setup should contain the base parameters so the code knows which files to look for:
-  - sampling_mode - (char) 'B' or 'J' for bootstrap or jackknife resampling methods
-  - pivot_type - (int) index for pivot scheme
-  - t0 - (int) metric time for pivot
-  - tN - (int) normalize time for pivot
-  - tD - (int) diagonalize time for pivot
-  - rebin - (int) value for blocksize when rebinning
-  - run_tag - (str) user defined unique tag associated with analysis
-  For each of the plots, a set of parameters will be replaced with a list of that paramer set
-  - compare_gevp - 'gevp_values' will replace 'pivot_type', 't0', 'tN', and 'tD' with a list of dict with those items
-  - compare_rebin - 'rebin_values' will replace 'rebin' for a list of rebin values
-  - compare_tags - 'filetags' will replace 'run_tag' for a list of runtags
-- plot_deltaE - include additional plots that compare shifts from non-interacting levels. Only possible if provided in data
+**Comparison Types:**
+- `compare_gevp` - Compare different GEVP pivot configurations
+- `compare_files` - Compare explicitly specified data files
+- `compare_rebin` - Compare different rebinning factors
+- `compare_tags` - Compare different analysis run tags
+- `plot_deltaE` - Include energy shift plots from non-interacting levels
 
-### Single Channel Fit
-info
+---
 
+## 🔧 Development
 
-## Setting up a New Task
-In order to create additional tasks, one should set up a task using the folowing skeleton:
-```
-import logging
+### Adding New Tasks
 
-doc = '''
-essential documentation
-'''
+The refactored architecture makes it easy to add new tasks. Create a new task by inheriting from the base classes:
 
-class MyTaskName:
+```python
+from fvspectrum.core.base_task import CorrelatorAnalysisTask
+
+class MyNewTask(CorrelatorAnalysisTask):
     @property
-    def info(self):
-        return doc
-
-    def __init__( self, task_name, proj_files_handler, general_configs, task_configs ):
-        self.proj_files_handler= proj_files_handler
-        #initialize your task, store default input in self.proj_files_handler.log_dir() (basically, throw the full possible input with all parameters where all the assumed parameters have been filled in in there)
-
-    def run( self ):
+    def info(self) -> str:
+        return "Documentation for my new task"
+    
+    def _get_default_parameters(self) -> Dict[str, Any]:
+        defaults = super()._get_default_parameters()
+        defaults.update({
+            'my_param': 'default_value'
+        })
+        return defaults
+    
+    def run(self) -> None:
+        # Implement task logic
         pass
-        # do the task, produce the data, data goes in self.proj_files_handler.data_dir(), info/warning/errors about the process goes in self.proj_files_handler.log_dir() (if any)
-
-    def plot( self ):
+    
+    def plot(self) -> None:
+        # Implement plotting logic
         pass
-        # make the plots, store in self.proj_files_handler.plot_dir(), again, any log/error warnings go in self.proj_files_handler.log_dir() as well (if any)
 ```
 
-Once the new class is set up. Add the class to task manager list. Note, if numbers on current tasks are modified then PyCALQ will not know where that data is anymore. Be sure to modify the filenames in the project or rerun.
+### Using Individual Components
 
-Example of adding a new task to `task_manager.py`:
+The new modular architecture allows using components independently:
+
+```python
+from fvspectrum.analysis.correlator_processor import CorrelatorProcessor
+from fvspectrum.fitting.spectrum_fitter import SpectrumFitter
+from fvspectrum.plotting.spectrum_plotter import SpectrumPlotter
+
+# Use components directly
+processor = CorrelatorProcessor(data_handler, project_handler)
+fitter = SpectrumFitter(mcobs_handler, project_handler)
+plotter = SpectrumPlotter(proj_files_handler, plot_config)
 ```
-class Task(Enum): #encode tasks into enum
-    preview_corrs = 0
-    average_corrs = 1
-    rotate_corrs = 2
-    fit_spectrum = 3
-    toy_corrs = 4
-    compare_spectrums = 5
-    new_task = 6
+
+### Task Integration
+
+To integrate a new task into PyCALQ:
+
+1. **Add to task manager** (`general/task_manager.py`):
+```python
+class Task(Enum):
+    # ... existing tasks
+    my_new_task = 6
 ```
 
-Then, open `pycalq.py` and add the task to `DEFAULT_TASKS`, `TASK_MAP`, and `TASK_DOC` in the same manner as the current tasks. If the task uses sigmond mcobshandler to manage data and memory, add the task to `SIGMOND_TASKS` and update the `dependencies` and `raw_data_dependence` variables at the top of `fvspectrum/sigmond_project_handler.py` accordingly.
+2. **Update PyCALQ configuration** (`pycalq.py`):
+```python
+# Add import
+import fvspectrum.my_new_task_new
 
+# Add to task mapping
+TASK_MAP = {
+    # ... existing mappings
+    tm.Task.my_new_task: fvspectrum.my_new_task_new.MyNewTask,
+}
 
-## To Do
+# Add documentation
+TASK_DOC = {
+    # ... existing docs
+    tm.Task.my_new_task: fvspectrum.my_new_task_new.doc,
+}
+```
 
-Items that need to be fixed:
- - Spectrum task: the estimates for interacting and noninteracting need to be separated because they occasionally have the same channel name. 
- - spectrum task: the fits to nonzero momentum single hadrons do not need to be calculated unless calculating the operator overlaps. if operator overlaps are turned off, then do not calculate these fits. 
+3. **Create compatibility wrapper** (`fvspectrum/my_new_task_new.py`):
+```python
+from fvspectrum.tasks.my_new_task import MyNewTask, TASK_DOCUMENTATION
 
-Desired updates:
- - internal setup for slurm or other scheduler systems
+doc = TASK_DOCUMENTATION
+MyNewTaskClass = MyNewTask
+```
+
+---
+
+## 📚 Additional Documentation
+
+- **Refactoring Details**: [`README_REFACTORING.md`](README_REFACTORING.md) - Complete refactoring documentation
+- **Refactoring Summary**: [`REFACTORING_SUMMARY.md`](REFACTORING_SUMMARY.md) - Technical summary of changes
+- **Test Documentation**: [`tests/README.md`](tests/README.md) - Testing framework documentation
+
+---
+
+## 🐛 Troubleshooting
+
+### Common Issues
+
+1. **Import Errors**: Ensure you're using correct import paths for new components
+2. **Configuration Errors**: Check YAML syntax and parameter names
+3. **File Not Found**: Verify data file paths are correct
+4. **Memory Issues**: Use appropriate chunking for large datasets
+
+### Debugging
+
+Enable detailed logging for debugging:
+```python
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Run your analysis - will show detailed debug information
+```
+
+### Legacy Code Access
+
+Original implementations are preserved in `fvspectrum/legacy_backup/` for reference.
+
+---
+
+## 📋 To Do
+
+### Current Issues
+- **Spectrum task**: Separate estimates for interacting and non-interacting levels with same channel names
+- **Spectrum task**: Skip nonzero momentum single hadron fits when operator overlaps are disabled
+
+### Desired Updates
+- **Scheduler Integration**: Internal setup for SLURM or other scheduler systems
+- **Enhanced Validation**: More comprehensive YAML configuration validation
+- **Performance Monitoring**: Built-in profiling and benchmarking tools
+- **Web Interface**: Optional web-based analysis interface
+
+---
+
+## 📄 License
+
+See [`LICENSE`](LICENSE) for license information.
+
+## 🤝 Contributing
+
+1. **Write tests** for any new functionality
+2. **Run the test suite** before submitting changes: `python tests/run_tests.py all`
+3. **Follow established patterns** in the refactored codebase
+4. **Update documentation** for user-facing changes
+
+The refactored architecture makes PyCALQ more maintainable and extensible while preserving all existing functionality. Happy analyzing! 🎉

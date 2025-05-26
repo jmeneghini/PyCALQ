@@ -1,8 +1,8 @@
 tasks:
-  # preview_corrs: 
+  # preview: 
   #   raw_data_files: 
   #     - /latticeQCD/raid3/ahanlon/data/cls21_c103/updated_stats/sigmond.fwd/cls21_c103/nucleon_S0.bin
-  # - average_corrs:
+  # - average:
   #     # only:
   #     #   - psq=0
   #     raw_data_files: 
@@ -14,7 +14,7 @@ tasks:
   #     create_pickles: False
   #   # info: True
 
-  # - rotate_corrs:
+  # - rotate:
   #     t0: 4
   #     tN: 4
   #     tD: 8
@@ -22,7 +22,7 @@ tasks:
   #     generate_estimates: False
   #     # only:
   #     #   - psq=0
-  # - rotate_corrs:
+  # - rotate:
   #     t0: 4
   #     tN: 4
   #     tD: 10
@@ -30,7 +30,7 @@ tasks:
   #     generate_estimates: False
   #     # only:
   #       # - psq=0
-  # - rotate_corrs:
+  # - rotate:
   #     t0: 5
   #     tN: 5
   #     tD: 10
@@ -39,7 +39,7 @@ tasks:
   #     generate_estimates: False
   #     # only:
   #     #   - psq=0
-  # - rotate_corrs:
+  # - rotate:
   #     t0: 5
   #     tN: 5
   #     tD: 12
@@ -47,7 +47,7 @@ tasks:
   #     generate_estimates: False
   #     # only:
   #     #   - psq=0
-  # - rotate_corrs:
+  # - rotate:
   #     t0: 6
   #     tN: 6
   #     tD: 12
@@ -56,7 +56,7 @@ tasks:
   #     generate_estimates: False
   #     # only:
   #     #   - psq=0
-  # - rotate_corrs:
+  # - rotate:
   #     t0: 6
   #     tN: 6
   #     tD: 14
@@ -64,7 +64,7 @@ tasks:
   #     generate_estimates: False
   #     # only:
   #     #   - psq=0
-  # - rotate_corrs:
+  # - rotate:
   #     t0: 7
   #     tN: 7
   #     tD: 14
@@ -74,7 +74,7 @@ tasks:
   #     #   - psq=0
 
 
-  - compare_spectrums:
+  - compare:
       max_level: 3
       compare_plots:
       - compare_gevp:

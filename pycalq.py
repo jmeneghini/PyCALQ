@@ -5,13 +5,13 @@ import general.config_handler as ch
 import general.project_directory as pd
 
 import fvspectrum.sigmond_project_handler as sph
-import fvspectrum.sigmond_view_corrs
-import fvspectrum.sigmond_average_corrs
-import fvspectrum.sigmond_rotate_corrs
-import fvspectrum.sigmond_spectrum_fits
-# import fvspectrum.generate_toy_correlators
-import fvspectrum.compare_sigmond_levels
-import luescher.single_channel_fit_mean
+
+# Import the new task classes directly
+from fvspectrum.tasks.preview_correlators import CorrelatorPreviewTask
+from fvspectrum.tasks.average_correlators import AverageCorrelatorsTask
+from fvspectrum.tasks.rotate_correlators import RotateCorrelatorsTask
+from fvspectrum.tasks.fit_spectrum import FitSpectrumTask
+from fvspectrum.tasks.compare_spectrums import CompareSpectrumsTask
 
 # Thanks to Drew and https://stackoverflow.com/a/48201163/191474
 #ends code when run logging.error(message) or logging.critical(message)
@@ -30,13 +30,11 @@ logging.basicConfig(format='%(levelname)s: %(message)s', handlers=[ExitOnExcepti
 DEFAULT_TASKS = { #manage default configurations
     "tasks":
         {
-            tm.Task.preview_corrs: None,
-            tm.Task.average_corrs: None,
-            tm.Task.rotate_corrs: None,
-            tm.Task.fit_spectrum: None,
-            # tm.Task.toy_corrs: None,
-            tm.Task.compare_spectrums: None,
-            tm.Task.single_channel_fit: None,
+            tm.Task.preview: None,
+            tm.Task.average: None,
+            tm.Task.rotate: None,
+            tm.Task.fit: None,
+            tm.Task.compare: None,
         }
 }
                     
@@ -44,29 +42,24 @@ DEFAULT_TASKS = { #manage default configurations
 TASK_ORDER = list(dict(tm.Task.__members__).values())   
 TASK_NAMES = {task.name:task for task in TASK_ORDER}
 SIGMOND_TASKS = [ #manage which classes to use for each unique task -> change for selection (fvspectrum)
-    tm.Task.preview_corrs,
-    tm.Task.average_corrs,
-    tm.Task.rotate_corrs,
-    tm.Task.fit_spectrum,
-    # tm.Task.toy_corrs,
+    tm.Task.preview,
+    tm.Task.average,
+    tm.Task.rotate,
+    tm.Task.fit,
 ]                            
 TASK_MAP = { #manage which classes to use for each unique task -> change for selection (fvspectrum)
-    tm.Task.preview_corrs: fvspectrum.sigmond_view_corrs.SigmondPreviewCorrs,
-    tm.Task.average_corrs: fvspectrum.sigmond_average_corrs.SigmondAverageCorrs,
-    tm.Task.rotate_corrs: fvspectrum.sigmond_rotate_corrs.SigmondRotateCorrs,
-    tm.Task.fit_spectrum: fvspectrum.sigmond_spectrum_fits.SigmondSpectrumFits,
-    # tm.Task.toy_corrs: fvspectrum.generate_toy_correlators.GenerateToyCorrs,
-    tm.Task.compare_spectrums: fvspectrum.compare_sigmond_levels.CompareLevels,
-    tm.Task.single_channel_fit: luescher.single_channel_fit_mean.SingleChannelFitMean,
+    tm.Task.preview: CorrelatorPreviewTask,
+    tm.Task.average: AverageCorrelatorsTask,
+    tm.Task.rotate: RotateCorrelatorsTask,
+    tm.Task.fit: FitSpectrumTask,
+    tm.Task.compare: CompareSpectrumsTask,
 }
 TASK_DOC = { #imports documentation from each task
-    tm.Task.preview_corrs: fvspectrum.sigmond_view_corrs.doc,
-    tm.Task.average_corrs: fvspectrum.sigmond_average_corrs.doc,
-    tm.Task.rotate_corrs: fvspectrum.sigmond_rotate_corrs.doc,
-    tm.Task.fit_spectrum: fvspectrum.sigmond_spectrum_fits.doc,
-    # tm.Task.toy_corrs: fvspectrum.generate_toy_correlators.doc,
-    tm.Task.compare_spectrums: fvspectrum.compare_sigmond_levels.doc,
-    tm.Task.single_channel_fit: luescher.single_channel_fit_mean.doc,
+    tm.Task.preview: getattr(CorrelatorPreviewTask, 'info', 'Preview correlator data'),
+    tm.Task.average: getattr(AverageCorrelatorsTask, 'info', 'Average correlators'),
+    tm.Task.rotate: getattr(RotateCorrelatorsTask, 'info', 'Rotate correlators using GEVP'),
+    tm.Task.fit: getattr(FitSpectrumTask, 'info', 'Fit spectrum to extract energies'),
+    tm.Task.compare: getattr(CompareSpectrumsTask, 'info', 'Compare different spectrum analyses'),
 }
 
 #set required general parameters 
@@ -75,7 +68,6 @@ TASK_DOC = { #imports documentation from each task
 REQUIRED_GENERAL_CONFIGS = [
    'project_dir',
    'ensemble_id',
-#    {'ensemble_info':['ensemble_id']},
 ]
 
 

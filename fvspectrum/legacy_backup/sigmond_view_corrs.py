@@ -7,34 +7,12 @@ from multiprocessing import Process
 import sigmond
 import fvspectrum.sigmond_util as sigmond_util
 import general.plotting_handler as ph
+from fvspectrum.tasks.preview_correlators import PreviewCorrelatorsTask, TASK_DOCUMENTATION
 
-doc = '''
-preview_corrs - a task a read in and estimate/plot any Lattice QCD temporal correlator data files given
-
-inputs
--------------
-general:
-  ensemble_id: cls21_c103       #required
-  project_dir: /latticeQCD/raid3/sarahski/lqcd/C103_R005/test_pycalq_project #required
-  sampling_info:                #not required 
-    mode: Jackknife               #default Jackknife
-  tweak_ensemble:               #not required
-    omissions: []               #default []
-    rebin: 1                    #default 1
-preview_corrs:                  #required
-  raw_data_files:               #required 
-  - /latticeQCD/raid3/ahanlon/data/cls21_c103/updated_stats/sigmond.fwd/cls21_c103/nucleon_S0.bin
-  create_pdfs: true             #not required #default true
-  create_pickles: true          #not required #default true
-  create_summary: true          #not required #default true
-  figheight: 6                  #not required #default 6
-  figwidth: 8                   #not required #default 8
-  info: true                    #not required #default false
-  plot: true                    #not required #default true
-  generate_estimates: true              #not required #default true
-'''
+# Use the documentation from the refactored module
+doc = TASK_DOCUMENTATION
       
-class SigmondPreviewCorrs:
+class SigmondPreviewCorrs(PreviewCorrelatorsTask):
 
     @property
     def info(self):

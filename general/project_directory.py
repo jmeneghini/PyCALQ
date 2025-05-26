@@ -214,10 +214,10 @@ class ProjectDirectoryHandler:
         tag = "pivot_info"
         if run_tag:
             tag += f"-{run_tag}"
-        if tm.Task.rotate_corrs.name==self.task_name:
+        if tm.Task.rotate.name==self.task_name:
             return self.samplings_file(False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD,tag)
         else:
-            return self.all_tasks[tm.Task.rotate_corrs.name].samplings_file(False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag)
+            return self.all_tasks[tm.Task.rotate.name].samplings_file(False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag)
         
     #filename for histogram plot of operator overlaps
     def operator_overlaps_plot(self, op, ptype):
@@ -231,15 +231,15 @@ class ProjectDirectoryHandler:
         tag = "operator_overlaps"
         if run_tag:
             tag += f"-{run_tag}"
-        if tm.Task.fit_spectrum.name==self.task_name:
+        if tm.Task.fit.name==self.task_name:
             return self.samplings_file(False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag)
         else:
-            return self.all_tasks[tm.Task.fit_spectrum.name].samplings_file(False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag)
+            return self.all_tasks[tm.Task.fit.name].samplings_file(False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag)
     
     #finds all averaged correlator data files based on rebin, sampling_type == 'B' or 'J', and selects momentums in only_mom if desired
     def get_averaged_data(self,binned, rebin, sampling_type=None, only_mom = []):
         data_files = []
-        if tm.Task.average_corrs.name==self.task_name:
+        if tm.Task.average.name==self.task_name:
             if only_mom:
                 for mom in only_mom:
                     data_files += list(glob.glob(self.samplings_file(binned, None, mom, rebin,sampling_type)))
@@ -249,20 +249,20 @@ class ProjectDirectoryHandler:
         else:
             if only_mom:
                 for mom in only_mom:
-                    data_files += list(glob.glob(self.all_tasks[tm.Task.average_corrs.name].samplings_file(binned, None, mom, rebin,sampling_type)))
+                    data_files += list(glob.glob(self.all_tasks[tm.Task.average.name].samplings_file(binned, None, mom, rebin,sampling_type)))
             else:
-                data_files += list(glob.glob(self.all_tasks[tm.Task.average_corrs.name].samplings_file(binned, None, '*', rebin,sampling_type)))
-            data_files.append(self.all_tasks[tm.Task.average_corrs.name].samplings_file(binned, None, None, rebin,sampling_type))
+                data_files += list(glob.glob(self.all_tasks[tm.Task.average.name].samplings_file(binned, None, '*', rebin,sampling_type)))
+            data_files.append(self.all_tasks[tm.Task.average.name].samplings_file(binned, None, None, rebin,sampling_type))
         return data_files
     
     #finds all rotated correlator data files based on rebin, rotate_type = 'SP' or 'RP', 
         #diagonalization parameters tN, t0, and tD, and sampling_type = 'B' or 'J'.
     def get_rotated_data(self,binned, rebin, rotate_type, tN, t0, tD, sampling_type=None, run_tag = ""): #, only_mom = []
         data_files = []
-        if tm.Task.rotate_corrs.name==self.task_name:
+        if tm.Task.rotate.name==self.task_name:
             data_files += list(glob.glob(self.samplings_file(binned, None, None, rebin,sampling_type, rotate_type, tN, t0, tD, run_tag)))
         else:
-            data_files += list(glob.glob(self.all_tasks[tm.Task.rotate_corrs.name].samplings_file(binned, None, None, rebin,sampling_type,rotate_type, tN, t0, tD, run_tag)))
+            data_files += list(glob.glob(self.all_tasks[tm.Task.rotate.name].samplings_file(binned, None, None, rebin,sampling_type,rotate_type, tN, t0, tD, run_tag)))
         return data_files
         
     #removes all old summary files for a given task
@@ -274,13 +274,13 @@ class ProjectDirectoryHandler:
 
     #removes all present averaged data files
     def remove_averaged_data(self,binned, rebin, sampling_type=None):
-        if tm.Task.average_corrs.name==self.task_name:
+        if tm.Task.average.name==self.task_name:
             for f in glob.glob(self.samplings_file(binned, None, '*', rebin,sampling_type)):
                 os.remove(f)
             for f in glob.glob(self.samplings_file(binned, None, '', rebin,sampling_type)):
                 os.remove(f)
         else:
-            for f in glob.glob(self.all_tasks[tm.Task.average_corrs.name].samplings_file(binned, None, '*', rebin,sampling_type)):
+            for f in glob.glob(self.all_tasks[tm.Task.average.name].samplings_file(binned, None, '*', rebin,sampling_type)):
                 os.remove(f)
-            for f in glob.glob(self.all_tasks[tm.Task.average_corrs.name].samplings_file(binned, None, '', rebin,sampling_type)):
+            for f in glob.glob(self.all_tasks[tm.Task.average.name].samplings_file(binned, None, '', rebin,sampling_type)):
                 os.remove(f)
