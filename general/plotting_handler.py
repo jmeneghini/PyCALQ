@@ -14,8 +14,7 @@ import cmath
 import fvspectrum.sigmond_util as sigmond_util
 import fvspectrum.spectrum_plotting_settings.settings as psettings
 from sigmond_scripts import util as utils
-from sigmond_scripts import fit_info
-import luescher.tools.kinematics 
+from sigmond_scripts import fit_info 
 
 #where source and sink labels go on plot
 ctext_x = 0.3
@@ -207,28 +206,10 @@ class PlottingHandler:
                 if fit_result_info["info"].model.short_name!="1-exp":
                     x=np.linspace(tmin, tmax, tmax-tmin+1)
                     model = fit_result_info["info"].model.sigmond_object(Nt)
-                    #if sim fit, grab the fit params that correspont to the correlator being plotted
-                        #corrlator is indicated by sh_index => 0 - interacting correlator, 1,2 - single hadron correlators
-                    if fit_result_info["info"].sim_fit: #make distinct between Deg/2-3exponential
-                        if sh_index==0:
-                            min_index = 0
-                            max_index = fit_result_info["info"].num_params
-                            params = [estimate.getFullEstimate() for estimate in fit_result_info["estimates"][min_index:max_index]] 
-                        if sh_index==1:
-                            model=fit_info.FitModel.TimeForwardTwoExponential.sigmond_object(Nt)
-                            min_index = fit_result_info["info"].num_params
-                            indexes = [min_index,min_index+1,2,min_index+2]
-                            params = [fit_result_info["estimates"][i].getFullEstimate() for i in indexes]
-                        if sh_index==2:
-                            model=fit_info.FitModel.TimeForwardTwoExponentialForCons.sigmond_object(Nt)
-                            min_index = fit_result_info["info"].num_params+3
-                            indexes = [min_index,min_index+1,2,3,min_index+2]
-                            params = [fit_result_info["estimates"][i].getFullEstimate() for i in indexes]
-                        energy_index = min_index #correspond to fit model
-                    else: #just plot fit line
-                        params = []
-                        for estimate in fit_result_info["estimates"]:
-                            params.append(estimate.getFullEstimate())
+                    # Plot fit line for multi-exponential models
+                    params = []
+                    for estimate in fit_result_info["estimates"]:
+                        params.append(estimate.getFullEstimate())
                     y = [-np.log(model.eval(params, x[i+1])/model.eval(params, x[i])) for i in range(len(x)-1)]
                     plt.plot(x[:-1]+0.5,y, color="black", ls="--")
                 energy_result = fit_result_info["estimates"][energy_index].getFullEstimate()
@@ -511,55 +492,7 @@ class PlottingHandler:
         """Save the current Matplotlib figure as a PDF file."""
         plt.savefig( filename, transparent=transparent ) 
 
-    ###########################
-    ##### Leuscher Plots ######
-    ###########################
-    #input can be data files generated, and fit
-    def single_channel_plot( self, energies, fit_output, fit_param,fit_masses,lattice_size):
-        # energies is the average energies,
-        average_energies = energies
-        # next is array of [ fit_param1,fit_param2,chi2 ]
-        # fit_type is ERE param
-        # masses = [ma,mb]
-        ma,mb = fit_masses
-        # L
-        x = []
-        x_range = []
-        y = []
-        y_range = []
-        ma,mb = masses
-        for i in range(len(average_energies)):
-            x.append(luescher.tools.kinematics.q2(i,ma,mb))
-            y.append(qcotd(i,L,psq,ma,mb,ref))
-            xp = []
-            yp = []
-            for en in np.linspace(average_energies[i] - 0.01, average_energies[i] + 0.01, 100):
-                xp.append(luescher.tools.kinematics.q2(en,ma,mb))
-                yp.append(qcotd(en,L,psq,ma,mb,ref))
-            x_range.append(xp)
-            y_range.append(yp)
-        
-        ecm_values = np.linspace(min(average_energies) - 0.5, min(average_energies) + 0.05, 500)
-        q2_values = np.linspace(min(luescher.tools.kinematics.q2(average_energies,ma,mb))-0.1, max(luescher.tools.kinematics.q2(average_energies,ma,mb))+0.1, 300)
-        virtual_state = []
-        for q2 in np.linspace(min(luescher.tools.kinematics.q2(average_energies,ma,mb))-0.75,-0.0001,300):
-            virtual_state.append(cmath.sqrt(-q2))
-        line = []
-        # need fit params (fit_output)
-        # fit params come as number of params + chi2
-        number_of_fit_params = len(fit_output)
-        fit_params = fit_output[:number_of_fit_params]
-        #fit = [-(1/3.30),2*1.582] #with ecm factor
-        for energy_COM in ecm_values:
-            line.append(luescher.tools.parametrizations.output(energy_COM,ma,mb,fit_param,fit_params))
-        
-        
-        # last value of fit
-        
-
-
-        
-        return 
+ 
 
     ###########################
     ##### pylatex actions #####

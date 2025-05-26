@@ -115,7 +115,7 @@ def sample_fit_config():
         'noise_cutoff': 0.0,
         'priors': {},
         'ratio': False,
-        'sim_fit': False
+
     }
 
 

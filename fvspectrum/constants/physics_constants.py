@@ -47,7 +47,6 @@ ENSEMBLE_PARAMETERS = {
 FINITE_VOLUME = {
     'min_mL_threshold': 3.0,  # Minimum mL for reliable finite volume analysis
     'max_mL_threshold': 10.0,  # Maximum mL before finite volume effects negligible
-    'luescher_validity_threshold': 0.1,  # Maximum momentum for Lüscher formula validity
 }
 
 # Physical scales and conversion factors

@@ -114,7 +114,7 @@ class SpectrumFitter:
             noise_cutoff=config_dict.get('noise_cutoff', 0.0),
             priors=config_dict.get('priors', {}),
             ratio=config_dict.get('ratio', False),
-            sim_fit=config_dict.get('sim_fit', False)
+
         )
     
     def _fit_single_hadrons(self, single_hadron_config: Dict[str, List[str]], 
@@ -290,7 +290,7 @@ class SpectrumFitter:
             'noise_cutoff': fit_config.noise_cutoff,
             'priors': fit_config.priors,
             'ratio': fit_config.ratio,
-            'sim_fit': fit_config.sim_fit
+
         }
     
     def get_spectrum_levels(self, sort_by_energy: bool = True) -> List[SpectrumLevel]:
@@ -649,55 +649,4 @@ class RatioFitter:
         return {}
 
 
-class SimultaneousFitter:
-    """
-    Handles simultaneous fits of multiple correlators.
-    
-    This class manages simultaneous fitting of correlators, which can
-    provide better constraints and reduced uncertainties.
-    """
-    
-    def __init__(self, spectrum_fitter: SpectrumFitter):
-        """
-        Initialize the simultaneous fitter.
-        
-        Args:
-            spectrum_fitter: Main spectrum fitter instance
-        """
-        self.spectrum_fitter = spectrum_fitter
-        self.mcobs_handler = spectrum_fitter.mcobs_handler
-    
-    def fit_simultaneous(self, correlator_groups: List[List[Any]], 
-                        fit_configs: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Perform simultaneous fits of correlator groups.
-        
-        Args:
-            correlator_groups: List of correlator groups to fit simultaneously
-            fit_configs: Fitting configuration
-            
-        Returns:
-            Dictionary of simultaneous fit results
-        """
-        sim_results = {}
-        
-        for i, group in enumerate(correlator_groups):
-            sim_results[f"group_{i}"] = self._fit_correlator_group(group, fit_configs)
-        
-        return sim_results
-    
-    def _fit_correlator_group(self, correlators: List[Any], 
-                            fit_configs: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Fit a group of correlators simultaneously.
-        
-        Args:
-            correlators: List of correlators to fit together
-            fit_configs: Fitting configuration
-            
-        Returns:
-            Dictionary of fit results for this group
-        """
-        # Implementation for simultaneous fitting
-        # This involves setting up a joint chi-squared and minimizing
-        return {} 
+ 

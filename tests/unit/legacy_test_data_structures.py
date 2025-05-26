@@ -34,7 +34,7 @@ class TestFitConfiguration:
         assert config.noise_cutoff == 0.0
         assert config.priors == {}
         assert config.ratio is False
-        assert config.sim_fit is False
+
         assert config.tmin_plots == []
         assert config.tmax_plots == []
     
@@ -49,7 +49,7 @@ class TestFitConfiguration:
             noise_cutoff=0.01,
             priors={"E0": (0.4, 0.6)},
             ratio=True,
-            sim_fit=True,
+
             tmin_plots=[12, 13, 14],
             tmax_plots=[23, 24, 25]
         )
@@ -60,7 +60,7 @@ class TestFitConfiguration:
         assert config.noise_cutoff == 0.01
         assert config.priors == {"E0": (0.4, 0.6)}
         assert config.ratio is True
-        assert config.sim_fit is True
+
         assert config.tmin_plots == [12, 13, 14]
         assert config.tmax_plots == [23, 24, 25]
     

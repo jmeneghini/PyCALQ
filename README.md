@@ -1,52 +1,36 @@
 # PyCALQ
-**Correlator Analysis and Lüscher Quantization Condition**
+**Python Correlator Analysis for Lattice QCD**
 
-Full analysis chain of the finite volume spectrum from two-point correlators to phase-shifts and other infinite-volume observables using the Lüscher formalism.
+A comprehensive framework for analyzing finite volume spectrum from two-point correlators in lattice QCD calculations.
 
-## 🚀 Recent Major Refactoring
+## Overview
 
-PyCALQ has been **completely refactored** with a modern, maintainable architecture and **simplified task names** for better usability.
+PyCALQ provides a complete analysis pipeline for lattice QCD correlator data, featuring:
 
-### ✨ What's New
-- **Simplified Task Names**: Clean, intuitive task names (`preview`, `average`, `rotate`, `fit`, `compare`)
-- **Clean Architecture**: Modular design with separation of concerns
-- **Type Safety**: Full type hints throughout the codebase
+- **Modular Architecture**: Clean separation of concerns with dedicated modules for analysis, fitting, and plotting
+- **Type Safety**: Full type hints throughout the codebase for better code reliability
 - **Comprehensive Testing**: Unit and integration test suite
-- **Better Error Handling**: Clear validation and error messages
-- **Enhanced Documentation**: Self-documenting code with detailed docstrings
-- **Improved Performance**: Better memory management and optimization
+- **Simplified Interface**: Intuitive task names and configuration
+- **Flexible Configuration**: YAML-based configuration system
 
-### 📁 New Code Structure
+## Code Structure
 ```
 fvspectrum/
 ├── core/                    # Base classes and data structures
 ├── analysis/               # Correlator processing components
 ├── fitting/                # Spectrum fitting components
 ├── plotting/               # Visualization components
-├── tasks/                  # Refactored task implementations
-├── utils/                  # Modular utility functions
-└── legacy_backup/          # Original files (preserved for reference)
+├── tasks/                  # Task implementations
+├── utils/                  # Utility functions
+└── constants/              # Physical constants and configuration
 ```
 
-### 🔄 Task Name Changes
-The task names have been simplified for better usability:
-- `preview_corrs` → `preview`
-- `average_corrs` → `average`
-- `rotate_corrs` → `rotate`
-- `fit_spectrum` → `fit`
-- `compare_spectrums` → `compare`
-
-**All functionality remains identical** - only the YAML task names have changed for simplicity.
-
-### 🎯 Final Simplification (Latest)
-The latest update **removed all legacy wrapper complexity** for maximum simplicity:
-- ✅ **Eliminated 7 wrapper files** (~2,000 lines of compatibility code)
-- ✅ **Direct task class imports** (no wrapper layer overhead)
-- ✅ **Simplified task names** (50% shorter, more intuitive)
-- ✅ **Cleaner architecture** (single source of truth for each task)
-- ✅ **Better maintainability** (fewer files, cleaner dependencies)
-
-For detailed information about the refactoring, see [`README_REFACTORING.md`](README_REFACTORING.md).
+## Available Tasks
+- `preview` - Preview and analyze correlator data
+- `average` - Average correlators over irreps and momenta
+- `rotate` - Perform GEVP rotation to extract eigenvalues
+- `fit` - Fit correlators to determine energy spectrum
+- `compare` - Compare different spectrum analyses
 
 ---
 
@@ -84,9 +68,9 @@ options:
                         task(s) configuration file(s)
 ```
 
-## 🧪 Testing
+## Testing
 
-The refactored codebase includes a comprehensive test suite:
+The codebase includes a comprehensive test suite:
 
 ```bash
 # Run all tests
@@ -301,10 +285,9 @@ Many tasks share these parameters:
         initial_params: {}                  # Optional, default: {}
         noise_cutoff: 0.0                   # Optional, default: 0.0
         priors: {}                          # Optional, default: {}
-        ratio: false                        # Optional, default: false
-        sim_fit: false                      # Optional, default: false
-        tmin_plots: []                      # Optional, default: []
-        tmax_plots: []                      # Optional, default: []
+            ratio: false                        # Optional, default: false
+    tmin_plots: []                      # Optional, default: []
+    tmax_plots: []                      # Optional, default: []
     
     # Alternative: separate configs for interacting vs non-interacting
     default_noninteracting_corr_fit: null # Optional
@@ -368,7 +351,6 @@ Many tasks share these parameters:
 - `noise_cutoff` - (float) Exclude data where error/value > cutoff
 - `priors` - (dict) Prior constraints `{param_name: {"Mean": value, "Error": width}}`
 - `ratio` - (bool) Use ratio correlators with non-interacting denominators
-- `sim_fit` - (bool) Perform simultaneous fits with single hadrons
 
 **Analysis Parameters:**
 - `compute_overlaps` - (bool) Calculate and plot operator overlaps
@@ -432,11 +414,11 @@ Many tasks share these parameters:
 
 ---
 
-## 🔧 Development
+## Development
 
 ### Adding New Tasks
 
-The refactored architecture makes it easy to add new tasks. Create a new task by inheriting from the base classes:
+The modular architecture makes it easy to add new tasks. Create a new task by inheriting from the base classes:
 
 ```python
 from fvspectrum.core.base_task import CorrelatorAnalysisTask
@@ -464,7 +446,7 @@ class MyNewTask(CorrelatorAnalysisTask):
 
 ### Using Individual Components
 
-The new modular architecture allows using components independently:
+The modular architecture allows using components independently:
 
 ```python
 from fvspectrum.analysis.correlator_processor import CorrelatorProcessor
@@ -516,19 +498,19 @@ MyNewTaskClass = MyNewTask
 
 ---
 
-## 📚 Additional Documentation
+## Additional Documentation
 
-- **Refactoring Details**: [`README_REFACTORING.md`](README_REFACTORING.md) - Complete refactoring documentation
-- **Refactoring Summary**: [`REFACTORING_SUMMARY.md`](REFACTORING_SUMMARY.md) - Technical summary of changes
+- **Development Details**: [`README_REFACTORING.md`](README_REFACTORING.md) - Development documentation
+- **Technical Summary**: [`REFACTORING_SUMMARY.md`](REFACTORING_SUMMARY.md) - Technical implementation details
 - **Test Documentation**: [`tests/README.md`](tests/README.md) - Testing framework documentation
 
 ---
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-1. **Import Errors**: Ensure you're using correct import paths for new components
+1. **Import Errors**: Ensure you're using correct import paths for components
 2. **Configuration Errors**: Check YAML syntax and parameter names
 3. **File Not Found**: Verify data file paths are correct
 4. **Memory Issues**: Use appropriate chunking for large datasets
@@ -549,7 +531,7 @@ Original implementations are preserved in `fvspectrum/legacy_backup/` for refere
 
 ---
 
-## 📋 To Do
+## To Do
 
 ### Current Issues
 - **Spectrum task**: Separate estimates for interacting and non-interacting levels with same channel names
@@ -563,15 +545,15 @@ Original implementations are preserved in `fvspectrum/legacy_backup/` for refere
 
 ---
 
-## 📄 License
+## License
 
 See [`LICENSE`](LICENSE) for license information.
 
-## 🤝 Contributing
+## Contributing
 
 1. **Write tests** for any new functionality
 2. **Run the test suite** before submitting changes: `python tests/run_tests.py all`
-3. **Follow established patterns** in the refactored codebase
+3. **Follow established patterns** in the codebase
 4. **Update documentation** for user-facing changes
 
-The refactored architecture makes PyCALQ more maintainable and extensible while preserving all existing functionality. Happy analyzing! 🎉
+The modular architecture makes PyCALQ maintainable and extensible while preserving all functionality.

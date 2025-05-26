@@ -67,7 +67,6 @@ class FitConfiguration:
     noise_cutoff: float = 0.0
     priors: Dict[str, Dict[str, float]] = field(default_factory=dict)
     ratio: bool = False
-    sim_fit: bool = False
     tmin_plots: List[Dict[str, Any]] = field(default_factory=list)
     tmax_plots: List[Dict[str, Any]] = field(default_factory=list)
     

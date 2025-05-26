@@ -76,7 +76,7 @@ class TestFitConfiguration:
         assert config.exclude_times == [10, 15]
         assert config.noise_cutoff == 0.1
         assert config.ratio is False
-        assert config.sim_fit is False
+
     
     def test_invalid_time_range(self):
         """Test validation of invalid time range."""

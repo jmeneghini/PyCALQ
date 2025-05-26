@@ -64,7 +64,6 @@ fit:                           # Required task configuration
     noise_cutoff: 0.0                   # Optional: Noise cutoff (default: 0.0)
     priors: {}                          # Optional: Prior constraints (default: {})
     ratio: false                        # Optional: Use ratio fits (default: false)
-    sim_fit: false                      # Optional: Simultaneous fit (default: false)
     tmin_plots: []                      # Optional: tmin variation plots
     tmax_plots: []                      # Optional: tmax variation plots
   reference_particle: pi                # Optional: Reference particle for normalization
@@ -133,8 +132,7 @@ class FitSpectrumTask(CorrelatorAnalysisTask):
     Task for fitting correlator spectra.
     
     This task fits single hadron and/or rotated correlators to determine
-    energy spectra, including support for ratio fits, simultaneous fits,
-    and operator overlap calculations.
+    energy spectra, including support for ratio fits and operator overlap calculations.
     """
     
     @property
@@ -227,7 +225,6 @@ class FitSpectrumTask(CorrelatorAnalysisTask):
             noise_cutoff=fit_config.get('noise_cutoff', 0.0),
             priors=fit_config.get('priors', {}),
             ratio=fit_config.get('ratio', False),
-            sim_fit=fit_config.get('sim_fit', False),
             tmin_plots=fit_config.get('tmin_plots', []),
             tmax_plots=fit_config.get('tmax_plots', [])
         )

@@ -22,9 +22,8 @@
 -  general_configs are information for ensemble. Tasks being checked by task_configs.
 -  Drew has view data task, including the tasks.
 -  Find the necessary tasks, and optional tasks. Defaults must be decided, SOON. General config is in config_handler.py
--  luscher_schmuscher.py, needed checks. Can process input and directs it to analyzing code.
+-  Removed Lüscher analysis functionality (no longer supported)
 -  Pickle files are useful for saving class objects to memory.
--  Comends on luscher
 
 ## Sarah's todo list
 - review joseph's code and make comments maybe
@@ -46,7 +45,7 @@
 
 ## Joseph's todo list
 - Understand Andre's code to reproduce NN scattering analysis
-- Upload Luscher code for single-channel scattering analysis, and change it for more general methods.
+- Removed Lüscher code (no longer supported in PyCALQ).
 - Checkout Data HANDLER Operations
 - FAIR data metakeys
 
