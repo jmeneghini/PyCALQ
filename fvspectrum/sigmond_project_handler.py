@@ -16,7 +16,7 @@ dependencies = {
     tm.Task.average: [],
     tm.Task.rotate: [tm.Task.average],
     tm.Task.fit: [tm.Task.average, tm.Task.rotate],
-    tm.Task.toy_corrs: [tm.Task.average]
+    tm.Task.compare: []
 }
 raw_data_dependence = [tm.Task.preview, tm.Task.average]
 
