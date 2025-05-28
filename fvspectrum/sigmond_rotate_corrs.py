@@ -261,13 +261,13 @@ class SigmondRotateCorrs:
                 else:
                     rotate_mode = "bins"
 
-                subtract_vev = False
+                sub_vev = sigmond_util.do_subtract_vev(channel, self.project_handler)
 
                 task_input.doCorrMatrixRotation(
                     sigmond_info.PivotInfo(pivot_string,norm_time=self.tN,metric_time=self.t0,
                                         diagonalize_time=self.tD,max_condition_number=self.other_params['max_condition_number']),
                     sigmond_info.RotateMode(rotate_mode),
-                    sigmond.CorrelatorMatrixInfo(operators,self.project_handler.hermitian,self.project_handler.subtract_vev),
+                    sigmond.CorrelatorMatrixInfo(operators,self.project_handler.hermitian,sub_vev),
                     operator.Operator( channel.getRotatedOp() ),
                     self.other_params['tmin'],
                     self.other_params['tmax'],
@@ -370,6 +370,8 @@ class SigmondRotateCorrs:
             if self.other_params['generate_estimates'] or self.other_params['plot']:
                 logging.info(f"Generating estimates for {self.proj_file_handler.data_dir('estimates')}...")
                 for channel in self.channels:
+                    sub_vev = sigmond_util.do_subtract_vev(channel, self.project_handler)
+
                     if self.other_params['plot'] and not self.other_params['generate_estimates']:
                         self.rotated_estimates[str(channel)] = {}
                     logging.info(f"\tGenerating estimates for channel {str(channel)}...")
@@ -383,7 +385,7 @@ class SigmondRotateCorrs:
                                 self.rotated_estimates[str(channel)][corr] = {}
                             
                             estimates = sigmond.getCorrelatorEstimates(mcobs_handler,corr,self.project_handler.hermitian,
-                                                                       self.project_handler.subtract_vev,sigmond.ComplexArg.RealPart, 
+                                                                       sub_vev,sigmond.ComplexArg.RealPart,
                                                                 self.project_handler.project_info.sampling_info.getSamplingMode())
                             if self.other_params['generate_estimates']:
                                 if estimates:
@@ -397,7 +399,7 @@ class SigmondRotateCorrs:
                                 logging.warning(f"No data found for {repr(corr)}.")
 
                             estimates = sigmond.getEffectiveEnergy(mcobs_handler,corr,self.project_handler.hermitian,
-                                                                   self.project_handler.subtract_vev,sigmond.ComplexArg.RealPart, 
+                                                                   sub_vev,sigmond.ComplexArg.RealPart,
                                                             self.project_handler.project_info.sampling_info.getSamplingMode(),
                                                             self.project_handler.time_separation,self.project_handler.effective_energy_type,
                                                             self.project_handler.vev_const)

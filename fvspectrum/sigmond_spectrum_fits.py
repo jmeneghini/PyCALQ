@@ -196,6 +196,9 @@ class SigmondSpectrumFits:
     #sigmond logs of chosen fits
     def fit_log_file(self, op):
         return os.path.join(self.proj_files_handler.log_dir("fit_logs"), f"{str(op).replace(' ','_')}_fit_log.xml")
+
+    def fit_input_file(self, op):
+        return os.path.join(self.proj_files_handler.log_dir("fit_logs"), f"{str(op).replace(' ','_')}_fit_input.xml")
     
     #configures the directory of potential outputs
     def samplings_file(self, filetag, channel=None):
@@ -517,7 +520,7 @@ class SigmondSpectrumFits:
 
         #get data files
         self.data_files = self.data_handler.averaged_data_files
-        self.data_files += self.data_handler.rotated_data_files 
+        self.data_files += self.data_handler.rotated_data_files
 
         #if no plots requested will not plot
         if not self.other_params['create_pdfs'] and not self.other_params['create_pickles'] and not self.other_params['create_summary']:
@@ -609,7 +612,6 @@ class SigmondSpectrumFits:
 
                     file = self.single_hadron_fit_params_file(repr(channel))
                     #do the fit, results stored in self.single_hadron_results and self.tmin_results
-
                     self.single_hadron_info[hadron_string]["energy_obs"], self.single_hadron_info[hadron_string]["amp_obs"] = self.do_fits( self.single_hadron_results, channel, op,
                                                                                                                                         this_fit_input, wmode, file, hadrons, self.tmin_results,
                                                                                                                                         self.tmax_results)
@@ -1351,11 +1353,17 @@ class SigmondSpectrumFits:
                     op_name = str(op).replace(" ","_")
                     this_op = op
                     if results[op]["success"]:
-                        if results[op]["info"].ratio:
+                        # the sub_vev conditional below is needed since it appears the no ratio ops are labeled with
+                        # sub_vev in the mcobs handler and thus disagree with the ratio_op
+                        if results[op]['info'].ratio:
                             this_op = op.ratio_op
+                            sub_vev = False
+                        else:
+                            sub_vev = sigmond_util.do_subtract_vev(this_op, self.project_handler)
+
                         corr = sigmond.CorrelatorInfo(this_op.operator_info,this_op.operator_info)
                         estimates = sigmond.getCorrelatorEstimates(self.mcobs_handler,corr,self.project_handler.hermitian,
-                                                                   self.project_handler.subtract_vev,sigmond.ComplexArg.RealPart, 
+                                                                   sub_vev,sigmond.ComplexArg.RealPart,
                                                                    self.project_handler.project_info.sampling_info.getSamplingMode())
                         df = sigmond_util.estimates_to_df(estimates)
 
@@ -1387,7 +1395,7 @@ class SigmondSpectrumFits:
                                 plh.save_pdf(self.proj_files_handler.corr_plot_file( op_name, "pdf"))
 
                         estimates = sigmond.getEffectiveEnergy(self.mcobs_handler,corr,self.project_handler.hermitian,
-                                                               self.project_handler.subtract_vev,sigmond.ComplexArg.RealPart, 
+                                                               sub_vev,sigmond.ComplexArg.RealPart,
                                                                self.project_handler.project_info.sampling_info.getSamplingMode(),
                                                                self.project_handler.time_separation,
                                                                self.project_handler.effective_energy_type,
@@ -1433,7 +1441,7 @@ class SigmondSpectrumFits:
                                 shop = self.get_sh_operator(sh)
                                 corr = sigmond.CorrelatorInfo(shop.operator_info,shop.operator_info)
                                 estimates = sigmond.getEffectiveEnergy(self.mcobs_handler,corr,self.project_handler.hermitian,
-                                                                       self.project_handler.subtract_vev,sigmond.ComplexArg.RealPart, 
+                                                                       sub_vev,sigmond.ComplexArg.RealPart,
                                                                        self.project_handler.project_info.sampling_info.getSamplingMode(),
                                                                        self.project_handler.time_separation,
                                                                        self.project_handler.effective_energy_type,
@@ -2016,8 +2024,8 @@ class SigmondSpectrumFits:
             self.project_handler.project_info.sampling_info,
             self.project_handler.project_info.ensembles_file,
             self.data_files,
-            "temp1.xml",
-            os.path.join(self.proj_files_handler.log_dir(),"sigmond_spectrum_log.xml"), #actually creating this
+            self.fit_input_file(intop),
+            os.path.join(self.proj_files_handler.log_dir(), "sigmond_spectrum_log.xml"),  # actually creating this
             self.other_params['precompute'],
             None,
         )
@@ -2027,6 +2035,7 @@ class SigmondSpectrumFits:
         model=this_fit_input['model']
         scat_info = []
         sh_priors = {}
+        
         if this_fit_input["sim_fit"]:
             model+="-sim"
             if not self.set_up_sim_fit(this_fit_input, model, scat_info, sh_priors, channel, intop):
@@ -2040,7 +2049,7 @@ class SigmondSpectrumFits:
             if self.other_params['minimizer_info']['minimizer']=='lmder':
                 if model!='multi-exp':
                     this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.sigmond_fit(task_input, intop, self.other_params['minimizer_info'], this_fit_input, self.mcobs_handler, 
-                                                    self.project_handler.project_info.sampling_info.getSamplingMode(), self.project_handler.subtract_vev, self.fit_log_file(intop), False, 
+                                                    self.project_handler.project_info.sampling_info.getSamplingMode(), self.project_handler.subtract_vev, self.fit_log_file(intop), False,
                                                     sh_priors, scat_info)
                 else:
                     multi_exp_input = {}
@@ -2051,8 +2060,12 @@ class SigmondSpectrumFits:
             else:
                 nsamplings = self.project_handler.project_info.sampling_info.getNumberOfReSamplings(self.project_handler.project_info.bins_info)
                 this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.scipy_fit(intop, self.other_params['minimizer_info'], this_fit_input, self.mcobs_handler, 
-                                                self.project_handler.subtract_vev, self.project_handler.hermitian, self.ensemble_info.getLatticeTimeExtent(), 
+                                                self.project_handler.subtract_vev, self.project_handler.hermitian, self.ensemble_info.getLatticeTimeExtent(),
                                                 self.project_handler.nodes, nsamplings, False, sh_priors, scat_info)
+
+            # write but supress logging output
+            task_input.write()
+
             results[channel][intop]["success"] = True
             results[channel][intop]["info"] = this_fit_info
             results[channel][intop]["estimates"] = these_fit_results
@@ -2077,12 +2090,15 @@ class SigmondSpectrumFits:
 
             if this_fit_info.ratio:
                 #compute ecm and elab
+                # turns fitenergy to delab (since same in ratio)
                 sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler,[fitenergy_obs_info],[1.0],delab_obs_info)
+
                 Nx = self.ensemble_info.getLatticeXExtent()
                 factor = 6.2831853071795864770
                 mom_factor = factor*factor/Nx/Nx
                 ni_levels = [(sh,mom*mom_factor) for sh,mom in this_ni_level]
                 sigmond.doReconstructEnergyBySamplings(self.mcobs_handler,delab_obs_info,ni_levels,elab_obs_info)
+                
                 results[channel][intop]["elab"] = self.mcobs_handler.getEstimate(elab_obs_info)
                 results[channel][intop]["dElab"] = these_fit_results[this_fit_info.energy_index]
                 ni_levels = [self.single_hadron_info[sh]["amp_obs"] for sh in self.other_params["non_interacting_levels"][str(channel)][intop.level]]
@@ -2222,7 +2238,7 @@ class SigmondSpectrumFits:
                     if not self.other_params['minimizer_info']['minimizer']=='lmder':
                         nsamplings = self.project_handler.project_info.sampling_info.getNumberOfReSamplings(self.project_handler.project_info.bins_info)
                         this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.scipy_fit(intop, self.other_params['minimizer_info'], this_fit_config, self.mcobs_handler, 
-                                                self.project_handler.subtract_vev, self.project_handler.hermitian, self.ensemble_info.getLatticeTimeExtent(), 
+                                                self.project_handler.subtract_vev, self.project_handler.hermitian, self.ensemble_info.getLatticeTimeExtent(),
                                                 self.project_handler.nodes, nsamplings, False, sh_priors, scat_info[:])
                     else:
                         this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.sigmond_fit(task_input, intop, self.other_params['minimizer_info'], this_fit_config, self.mcobs_handler, 

@@ -248,6 +248,17 @@ def get_pivot_info(log_list):
     
     return all_pivot_info
 
+def do_subtract_vev(op, project_handler):
+    """
+    Subtract the vev from the operator if desired and present.
+    Currently just for averaged correlators, not correlator matrices
+    """
+    op_vev_bool = op.vev
+    if project_handler.project_info.subtract_vev and op_vev_bool:
+        return True
+    else:
+        return False
+
 #use the minimizer lmder in sigmond for fitting; very fast
 def sigmond_fit( task_input, fitop, minimizer_configs, fit_configs, 
                 mcobs_handler, sampling_info, subvev, logfile, delete_samplings = False, sh_priors={}, scat_info = []):
@@ -319,12 +330,18 @@ def sigmond_fit( task_input, fitop, minimizer_configs, fit_configs,
             optype = sigmond.OpKind.GenIrrep
         else:
             optype = sigmond.OpKind.BasicLapH
-
+            
+        # subtract vev from interacting operator if desired
+        intop = (this_fit_info.operator.operator_info,
+                    this_fit_info.operator.vev and subvev)
+            
         ni_ops = []
         for op in fit_configs['non_interacting_operators'].operators:
-            ni_ops.append((op.operator_info, 0))
+            ni_ops.append((op.operator_info, 
+                        op.vev and subvev))
+            
         ratio_op = sigmond.OperatorInfo(opstring, optype)
-        sigmond.doCorrelatorInteractionRatioBySamplings(mcobs_handler,(this_fit_info.operator.operator_info, 0),ni_ops,
+        sigmond.doCorrelatorInteractionRatioBySamplings(mcobs_handler,intop,ni_ops,
                                                         fit_configs['tmin'],fit_configs['tmax'],ratio_op, set(), 0)
 
 
@@ -732,11 +749,15 @@ def scipy_fit(fitop, minimizer_configs, fit_configs,
 
     fit_op = fitop
     if this_fit_info.ratio:
+        # subtract vev from interacting operator if desired
+        intop = (fit_op.operator_info,
+                    fit_op.vev and subvev)
+            
         ni_ops = []
         for op in fit_configs['non_interacting_operators'].operators:
-            ni_ops.append((op.operator_info, 0))
-        fit_op = fitop.ratio_op
-        sigmond.doCorrelatorInteractionRatioBySamplings(mcobs_handler,(this_fit_info.operator.operator_info, 0),ni_ops,
+            ni_ops.append((op.operator_info, 
+                        op.vev and subvev))
+        sigmond.doCorrelatorInteractionRatioBySamplings(mcobs_handler,intop,ni_ops,
                                                         fit_configs['tmin'],fit_configs['tmax'],fit_op.operator_info, set(), 0)
 
     #if sim fit
