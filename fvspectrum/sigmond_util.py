@@ -11,11 +11,31 @@ import scipy as sp
 import time
 import yaml
 from threading import Thread
+import contextlib
+import sys
 
 import sigmond
 from sigmond_scripts import data_files, data_handler
 from sigmond_scripts import fit_info, sigmond_info, sigmond_log
 from sigmond_scripts import channel
+
+@contextlib.contextmanager
+def suppress_output():
+    """Context manager to suppress stdout, stderr, and logging while preserving exceptions"""
+    with open(os.devnull, 'w') as devnull:
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+        old_logging_level = logging.getLogger().level
+        try:
+            sys.stdout = devnull
+            sys.stderr = devnull
+            # Suppress all logging by setting level higher than CRITICAL
+            logging.getLogger().setLevel(logging.CRITICAL + 1)
+            yield
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+            logging.getLogger().setLevel(old_logging_level)
 
 #project info class drew designed for keeping all
     #important information for correlator analysis

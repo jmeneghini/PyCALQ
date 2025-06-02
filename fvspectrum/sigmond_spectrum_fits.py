@@ -169,8 +169,14 @@ class Obs(Enum): #relevant obs shortnames
     elab = 1 #energy in lab frame
     ecm = 2 #energy in center of momentum frame
     ecm_ref = 3 #energy in center of momentum from divided by single hadron mass
-    amp = 4 #amplitude, assumed lab frame
-    dElab_ref = 5 #shift energy divided by single hadron mass
+    elab_ref = 4 #energy in lab frame divided by single hadron mass
+    amp = 5 #amplitude, assumed lab frame
+    dElab_ref = 6 #shift energy divided by single hadron mass
+    
+    @classmethod
+    def energy_observables(cls):
+        """Return list of all observable names"""
+        return [obs.name for obs in cls]
 
 #to do: 
 #have user input how the shifts are calculated
@@ -224,6 +230,10 @@ class SigmondSpectrumFits:
     #filename for file output with samplings of the energy levels from the chosen fits
     def spectrum_levels_file( self, channel = None ): #add rotation info, and then average info
         return self.samplings_file("levels", channel)
+
+    #filename for file output with samplings of the energy levels from the chosen fits in sigmond_hdf5 format
+    def spectrum_levels_sigmond_file( self, channel = None ): #add rotation info, and then average info
+        return self.samplings_file("levels_sigmond", channel)
         
     #filename for file output with the parameter fit samplings  of the noninteracting correlator fits 
         #in sigmond hdf5 format with naming scheme based on sigmond scripts
@@ -873,6 +883,8 @@ class SigmondSpectrumFits:
                     
         #add to spectrum level with single hadron levels in the spectrum hdf5, delete interacting samplings after finish
         logging.info("Writing spectrum level samplings to file...")
+
+        wmode = sigmond.WriteMode.Overwrite
         with h5py.File(self.spectrum_levels_file(False),'a') as final_levels:
             if self.other_params['reference_particle']:
                 ref_obs = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["energy_obs"]
@@ -904,7 +916,7 @@ class SigmondSpectrumFits:
                             this_fit_info = self.results[channel][op]["info"]
 
                             # get the avaliable energies
-                            energy_tags = ['ecm']
+                            energy_tags = ['ecm', 'elab']
                             energy_ref_tags = []
                             if "dElab" in self.results[channel][op]:
                                 energy_tags.append('dElab')
@@ -912,7 +924,6 @@ class SigmondSpectrumFits:
                                 for tag in energy_tags:
                                     energy_ref_tags.append(tag+"_ref")
                                 energy_tags += energy_ref_tags
-                            energy_tags.append('elab') # no reference particle for elab
 
                             get_MCObsInfo = lambda obs_tag: sigmond.MCObsInfo(this_fit_info.obs_name, this_fit_info.obs_id(this_fit_info.num_params+Obs[obs_tag].value))
 
@@ -925,7 +936,7 @@ class SigmondSpectrumFits:
                             if self.mcobs_handler.queryFullAndSamplings(energy_obs_infos['elab']):
                                 self.mcobs_handler.setSamplingBegin()
                                 this_level = {
-                                    "rotate_level": op.level, 
+                                    "rotate_level": op.level,
                                     "ecm value": self.mcobs_handler.getCurrentSamplingValue(energy_obs_infos['elab']),
                                     "elab": energy_obs_infos['elab']
                                 }
@@ -951,7 +962,7 @@ class SigmondSpectrumFits:
                                 complete_basis = False
                         else:
                             complete_basis = False
-                    
+
                     if complete_basis:
                         level_ordering.sort(key=energy_sort)
                         # doesn't seem to be used anywhere and causes a KeyError if there are no specificied non-interacting levels (even with no ratio fits)
@@ -960,11 +971,12 @@ class SigmondSpectrumFits:
                         # irrep_group.attrs['free_levels'] = free_levels
 
                     for i, level in enumerate(level_ordering):
-                        for energy in ["ecm", "elab", 'dElab','ecm_ref']:
+                        current_level_mcobs_infos_sorted = {}
+                        for energy in Obs.energy_observables():
                             if energy in level:
-                                samplings = self.mcobs_handler.getFullAndSamplingValues(level[energy], 
+                                samplings = self.mcobs_handler.getFullAndSamplingValues(level[energy],
                                                 self.project_handler.project_info.sampling_info.getSamplingMode())
-                                
+
                                 if complete_basis:
                                     energy_index = i
                                 else:
@@ -974,31 +986,82 @@ class SigmondSpectrumFits:
                                 else:
                                     energy_name = f"{energy}_{energy_index}"
                                 irrep_group.create_dataset(energy_name,data=np.array(samplings.array()))
-                        for energy in ["ecm", "elab", 'dElab','ecm_ref']:
+
+                                sigmond_obs_name = str(channel).replace(' ', '_') + f"_{energy_name}"
+
+                                new_mcobs_info = sigmond.MCObsInfo(sigmond_obs_name, 0)
+                                
+                                # Copy the sampling data to the new observable name
+                                sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler, [level[energy]], [1.0], new_mcobs_info)
+
+                                current_level_mcobs_infos_sorted[sigmond_obs_name] = new_mcobs_info
+
+                        dummy = sigmond.XMLHandler("test")
+                        mcobs_infos_in = set(current_level_mcobs_infos_sorted.values())
+
+                        self.mcobs_handler.writeSamplingValuesToFile(mcobs_infos_in, self.spectrum_levels_sigmond_file('samplings'), dummy, wmode, "H")
+                        
+                        # after first write, set wmode to update
+                        if wmode == sigmond.WriteMode.Overwrite:
+                            wmode = sigmond.WriteMode.Update
+
+                        for energy in Obs.energy_observables():
                             if energy in level:
                                 if self.mcobs_handler.queryFullAndSamplings(level[energy]):
                                     if self.other_params['reference_particle']:
                                         if ref_channel!=channel:
                                             self.mcobs_handler.eraseSamplings(level[energy])
 
-            # divide single hadrons by reference particle
-            if self.other_params['reference_particle']:
-                if f"{self.other_params['reference_particle']}(0)" in self.single_hadron_info:
-                    reference_samplings = final_levels['single_hadrons'][f"{self.other_params['reference_particle']}(0)"][()]
-                    final_levels['single_hadrons'].create_dataset("ref",data=(reference_samplings))
-                    for particle in final_levels['single_hadrons'].keys():
+            # divide single hadrons by reference particle, and write reference particle samplings to both files, and
+            # ecm values to sigmond file (already previously added to 'final_levels')
+            do_refs = self.other_params['reference_particle'] and \
+                             f"{self.other_params['reference_particle']}(0)" in self.single_hadron_info
+            if do_refs:
+                reference_samplings = final_levels['single_hadrons'][f"{self.other_params['reference_particle']}(0)"][()]
+                final_levels['single_hadrons'].create_dataset("ref", data=(reference_samplings))
+            else:
+                logging.warning(f"Reference particle {self.other_params['reference_particle']}(0) not defined, skipping reference particle samplings.")
+
+            sh_mcobs_infos = {}
+            for particle, particle_info in self.single_hadron_info.items():
+                if particle in final_levels['single_hadrons'].keys(): #should always be, but just in case
+                    # add new obs to sigmond file
+                    sigmond_obs_name = str(particle)+f"_elab"
+                    new_mcobs_info = sigmond.MCObsInfo(sigmond_obs_name, 0)
+                    
+                    # Copy the sampling data to the new observable name
+                    sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler, [particle_info["energy_obs"]], [1.0], new_mcobs_info)
+                    
+                    sh_mcobs_infos[sigmond_obs_name] = new_mcobs_info
+
+                    if do_refs:
+                        # divide by reference particle, add to pycalq hdf5
                         samplings = final_levels['single_hadrons'][particle][()]
-                        final_levels['single_hadrons'].create_dataset(particle+"_ref",data=(samplings/reference_samplings))
+                        final_levels['single_hadrons'].create_dataset(particle+"_ref", data=(samplings/reference_samplings))
 
+                        # divide by reference particle, add to sigmond hdf5
+                        sigmond_obs_ref_name = sigmond_obs_name + "_ref"
+                        new_mcobs_ref_info = sigmond.MCObsInfo(sigmond_obs_ref_name, 0)
+                        ref_obs = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["energy_obs"]
+                        sigmond.doRatioBySamplings(self.mcobs_handler, particle_info["energy_obs"], ref_obs,
+                                                   new_mcobs_ref_info)
+                        sh_mcobs_infos[sigmond_obs_ref_name] = new_mcobs_ref_info
 
-                else:
-                    logging.warning(f"Reference particle {self.other_params['reference_particle']}(0) not defined.")
+            # write all single hadron mcobs infos to sigmond file
+            dummy = sigmond.XMLHandler("test")
+            sh_mcobs_infos_in = set(sh_mcobs_infos.values())
+            self.mcobs_handler.writeSamplingValuesToFile(sh_mcobs_infos_in, self.spectrum_levels_sigmond_file('samplings'), dummy, wmode, "H")
+
         
         if os.path.exists(self.spectrum_levels_file()):
             logging.info(f"Final level samplings written to {self.spectrum_levels_file()}.")
 
+        if os.path.exists(self.spectrum_levels_sigmond_file()):
+            logging.info(f"Final level samplings written in sigmond_format to {self.spectrum_levels_sigmond_file()}.")
+
         if self.other_params['do_interacting_fits'] or self.interacting_channels:
             #add rotation and ensemble info to all sampling output files
+            print('adding rotation and ensemble info to all sampling output files')
             with h5py.File(self.other_params["pivot_file"]) as pivotfile:
                 rotate_info = pivotfile['Info']['Header'][()]
                 if os.path.exists(self.spectrum_fit_params_file()):
@@ -1009,8 +1072,14 @@ class SigmondSpectrumFits:
                         overlapsfile['Info'].create_dataset('Header', data = rotate_info)
                 if os.path.exists(self.spectrum_levels_file()):
                     with h5py.File(self.spectrum_levels_file(), 'r+') as levelsfile:
-                        levelsinfo = levelsfile.create_group('Info')
-                        levelsinfo.create_dataset('Header', data = rotate_info)
+                        # create the Info group
+                        levelsfile.create_group('Info')
+                        # copy the all contents of the Info group from the pivot file
+                        for key, value in pivotfile['Info'].items():
+                            levelsfile['Info'].create_dataset(key, data = value)
+
+                        
+
 
         #write estimates of both single hadrons and spectrum #separate into different files or specify sh or interacting, occasionally they have the same channel name. 
         if self.other_params["generate_estimates"]:
@@ -1410,7 +1479,6 @@ class SigmondSpectrumFits:
                                 pickle_file = self.proj_files_handler.effen_plot_file( op_name, "pickle")
                             if self.other_params['create_pdfs'] or self.other_params['create_summary']:
                                 pdf_file = self.proj_files_handler.effen_plot_file( op_name, "pdf")
-
                             if len(processes)<self.project_handler.nodes:
                                 processes.append(Process(target=plh.sigmond_corrfit_plot_and_save,
                                                          args=(df, results[op], self.ensemble_info.getLatticeTimeExtent(), 1, this_op,pickle_file, pdf_file,)))
@@ -2035,6 +2103,7 @@ class SigmondSpectrumFits:
         model=this_fit_input['model']
         scat_info = []
         sh_priors = {}
+        obs_energy_tags = ['ecm', 'elab']
         
         if this_fit_input["sim_fit"]:
             model+="-sim"
@@ -2063,8 +2132,9 @@ class SigmondSpectrumFits:
                                                 self.project_handler.subtract_vev, self.project_handler.hermitian, self.ensemble_info.getLatticeTimeExtent(),
                                                 self.project_handler.nodes, nsamplings, False, sh_priors, scat_info)
 
-            # write but supress logging output
-            task_input.write()
+            # write but suppress logging output
+            with sigmond_util.suppress_output():
+                task_input.write()
 
             results[channel][intop]["success"] = True
             results[channel][intop]["info"] = this_fit_info
@@ -2081,6 +2151,8 @@ class SigmondSpectrumFits:
             ecm_obs_info = this_fit_info.fit_param_obs(this_fit_info.num_params+Obs.ecm.value)
             amp_obs_info = this_fit_info.fit_param_obs(this_fit_info.num_params+Obs.amp.value) 
 
+
+
             if "non_interacting_level" in this_fit_input:
                 this_ni_level = this_fit_input["non_interacting_level"]
                 if this_fit_info.sim_fit:
@@ -2089,6 +2161,7 @@ class SigmondSpectrumFits:
                     this_ni_level = get_sim_ni_level(this_fit_input["non_interacting_level"],this_fit_info.obs_name,scat_info)
 
             if this_fit_info.ratio:
+                obs_energy_tags.append('dElab')
                 #compute ecm and elab
                 # turns fitenergy to delab (since same in ratio)
                 sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler,[fitenergy_obs_info],[1.0],delab_obs_info)
@@ -2100,15 +2173,19 @@ class SigmondSpectrumFits:
                 sigmond.doReconstructEnergyBySamplings(self.mcobs_handler,delab_obs_info,ni_levels,elab_obs_info)
                 
                 results[channel][intop]["elab"] = self.mcobs_handler.getEstimate(elab_obs_info)
+
                 results[channel][intop]["dElab"] = these_fit_results[this_fit_info.energy_index]
+
                 ni_levels = [self.single_hadron_info[sh]["amp_obs"] for sh in self.other_params["non_interacting_levels"][str(channel)][intop.level]]
                 sigmond.doReconstructAmplitudeBySamplings(self.mcobs_handler, fitamp_obs_info,ni_levels,amp_obs_info)
             else:
                 #compute dElab if possible
                 results[channel][intop]["elab"] = these_fit_results[this_fit_info.energy_index]
+
                 sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler,[fitenergy_obs_info],[1.0],elab_obs_info)
                 sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler,[fitamp_obs_info],[1.0],amp_obs_info)
                 if "non_interacting_level" in this_fit_input:
+                    obs_energy_tags.append('dElab')
                     Nx = self.ensemble_info.getLatticeXExtent() #assuming Nx=Ny=Nz
                     factor = 6.2831853071795864770 
                     ni_levels = [(sh,mom*factor*factor/Nx/Nx) for sh,mom in this_ni_level]
@@ -2153,6 +2230,8 @@ class SigmondSpectrumFits:
             if hadrons!=1:
                 for param in obs_infos:
                     self.mcobs_handler.eraseSamplings(param)
+
+
 
         #do tmin_fits
         tmin_results[channel][intop] = {}
