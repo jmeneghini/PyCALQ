@@ -746,11 +746,19 @@ class SigmondSpectrumFits:
 
             #divide single hadron ecm by ref for plotting info
             if f"{self.other_params['reference_particle']}(0)" in self.single_hadron_info:
-                ref_ecm = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["ecm"]
+                ref_ecm_obs = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["energy_obs"]
                 for particle in self.single_hadron_info:
                     if "ecm_ref" in self.single_hadron_info[particle]:
-                        self.single_hadron_info[particle]["ecm_ref"] /= ref_ecm
-                                
+                        # Create a new MCObsInfo for the ratio
+                        ecm_ref_obs = sigmond.MCObsInfo(f"{particle}_ecm_ref", 0)
+                        # Use proper ratio sampling instead of simple division
+                        sigmond.doRatioBySamplings(self.mcobs_handler, 
+                                            self.single_hadron_info[particle]["energy_obs"], 
+                                            ref_ecm_obs, 
+                                            ecm_ref_obs)
+                        # Store the properly calculated ratio
+                        self.single_hadron_info[particle]["ecm_ref"] = self.mcobs_handler.getEstimate(ecm_ref_obs).getFullEstimate()
+
             #compute overlaps
             if self.other_params['do_interacting_fits'] or self.interacting_channels:
                 self.zmags = {}
@@ -930,8 +938,11 @@ class SigmondSpectrumFits:
                             energy_obs_infos = {tag: get_MCObsInfo(tag) for tag in energy_tags}
 
                             if channel.psq == 0:
-                                # if mom is 0, then set ecm info with elab, but ecm_ref is still ecmref info
+                                # if mom is 0, then set ecm info with elab
                                 energy_obs_infos['ecm'] = energy_obs_infos['elab']
+                                if 'elab_ref' in energy_obs_infos:
+                                    energy_obs_infos['ecm_ref'] = energy_obs_infos['elab_ref']
+
 
                             if self.mcobs_handler.queryFullAndSamplings(energy_obs_infos['elab']):
                                 self.mcobs_handler.setSamplingBegin()
