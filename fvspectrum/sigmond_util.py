@@ -1423,6 +1423,7 @@ def optimal_per_operator_normalized_assignment(
     level_to_red_op = {
         r: c for r, c in zip(row_ind, col_ind) if r < n_levels and c < n_cols
     }
+    
 
     # ------------------------------------------------------------------
     # Step 5: Build assignments, adding simple sole-single-hadron rule
@@ -1443,7 +1444,6 @@ def optimal_per_operator_normalized_assignment(
 
         is_single = len(chosen_hadrons) == 1
         
-        print(z_reduced)
         if is_single:
             if chosen_overlap >= primary_threshold:
                 # confident single hadron
@@ -1455,8 +1455,6 @@ def optimal_per_operator_normalized_assignment(
             for op_idx in ordered_ops:
                 if op_idx == red_op_idx:
                     continue
-                if z_reduced[lvl_idx, op_idx] < primary_threshold:
-                    break  # remaining overlaps too small
                 hlist = op_hadrons_reduced[op_idx]
                 if len(hlist) == 2:  # valid NI pair
                     alt_pair = hlist
