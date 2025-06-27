@@ -1401,6 +1401,11 @@ def optimal_per_operator_normalized_assignment(
     # Step 4: Hungarian assignment on reduced matrix
     # ------------------------------------------------------------------
 
+    try:
+        from scipy.optimize import linear_sum_assignment
+    except ImportError as err:
+        raise ImportError("scipy.optimize.linear_sum_assignment is required for NI assignment but not available") from err
+
     cost_matrix = -z_reduced  # maximise overlaps by minimising negative
 
     n_rows, n_cols = cost_matrix.shape
@@ -1412,7 +1417,7 @@ def optimal_per_operator_normalized_assignment(
     else:
         padded = cost_matrix
 
-    row_ind, col_ind = sp.optimize.linear_sum_assignment(padded)
+    row_ind, col_ind = linear_sum_assignment(padded)
 
     # Map level -> chosen reduced operator index
     level_to_red_op = {

@@ -820,24 +820,28 @@ class SigmondSpectrumFits:
                             # since 'random' NI's are likely located in 'non_interacting_levels' for these problematic ops
                             ni_op_strs_from_pivot = [get_hadrons(get_op_name(op)) for op in self.zmags[channel]["ops"]]
 
-                            for ops in ni_op_strs_from_pivot:
-                                if len(ops) < 2:
-                                    self.assignment_certainty[channel] = None
-                                    break
+                            # Proceed with certainty calculation as long as at least one operator corresponds
+                            # to a genuine NI pair (length ≥ 2).  Single–hadron operators are simply ignored.
+                            has_pair_op = any(len(ops) >= 2 for ops in ni_op_strs_from_pivot)
 
-                            if self.other_params['non_interacting_levels'].get(str(channel), {}) != {}:
-                                if self.assignment_certainty[channel] is None:
-                                    logging.warning(f"Assignment certainty not computed for channel {channel} due to single hadron in rotated matrix.")
-                                    continue
-                                # create normalized z_matrix
-                                z_mat = sigmond_util.construct_Z_matrix(self.zmags[channel])
-                                normalized_z_mat = sigmond_util.calculate_normalized_Z_matrix(z_mat)
-                                # get assignment certainty
+                            if not has_pair_op:
+                                # Nothing meaningful to compare – skip quietly
+                                self.assignment_certainty[channel] = None
+                                continue
 
-                                self.assignment_certainty[channel] = sigmond_util.calculate_certainty_metrics(normalized_z_mat,
-                                                                                                              self.other_params['non_interacting_levels'][str(channel)],
-                                                                                                              [get_hadrons(get_op_name(op)) for op in self.zmags[channel]["ops"]])
-                                
+                            if self.other_params['non_interacting_levels'].get(str(channel), {}) == {}:
+                                continue
+
+                            # create normalized z_matrix
+                            z_mat = sigmond_util.construct_Z_matrix(self.zmags[channel])
+                            normalized_z_mat = sigmond_util.calculate_normalized_Z_matrix(z_mat)
+                            # get assignment certainty
+                            self.assignment_certainty[channel] = sigmond_util.calculate_certainty_metrics(
+                                normalized_z_mat,
+                                self.other_params['non_interacting_levels'][str(channel)],
+                                [get_hadrons(get_op_name(op)) for op in self.zmags[channel]["ops"]]
+                            )
+                            
                         if any_success:   
                             logging.info(f"Operator overlaps written to {self.operator_overlaps_samplings()}.")
                         else:
