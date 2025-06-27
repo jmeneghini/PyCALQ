@@ -1445,6 +1445,7 @@ def optimal_per_operator_normalized_assignment(
         is_single = len(chosen_hadrons) == 1
         
         if is_single:
+            print(chosen_overlap)
             if chosen_overlap >= primary_threshold:
                 # confident single hadron
                 assignments.append(chosen_hadrons)
