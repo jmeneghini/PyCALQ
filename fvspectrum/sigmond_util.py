@@ -1497,16 +1497,17 @@ def calculate_certainty_metrics(normalized_z, assignments, z_ops):
     for level_idx, nis in enumerate(assignments):
         # Get all ops ids corresponding to current single hadron
         op_ids = [op_idx for op_idx, op in enumerate(z_ops) if tuple(op) == tuple(nis)]
-        normalized_value = normalized_z[level_idx, op_ids].max()
 
-        # Margin-based certainty
-        alternative_costs = np.delete(normalized_z[level_idx, :], op_ids)
-        next_best_value = np.max(alternative_costs)
+        if op_ids:
+            normalized_value = normalized_z[level_idx, op_ids].max()
+            alternative_costs = np.delete(normalized_z[level_idx, :], op_ids)
+            next_best_value = np.max(alternative_costs) if alternative_costs.size else 0.0
+        else:
+            # Assigned NI not represented among operator columns
+            normalized_value = 0.0
+            next_best_value = np.max(normalized_z[level_idx, :])
+
         margin = normalized_value - next_best_value
-
-        # Entropy-based certainty
-        # probs = normalized_z[:, op_idx] / np.sum(normalized_z[:, op_idx])
-        # entropy = -np.sum(probs * np.log(probs + 1e-10))  # Add small value to avoid log(0)
 
         # Combined certainty (felt this seem to give more reasonable results)
         combined_certainty = 0.3 * normalized_value + 0.7 * margin
