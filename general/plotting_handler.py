@@ -495,7 +495,8 @@ class PlottingHandler:
         plt.xlabel("rotate level")
         plt.ylabel("Certainty") 
         # set xticks to have level #\n certainty
-        plt.xticks(range(len(ni_levels)),[f"{i}\n{ni_levels[i][0]}\n{ni_levels[i][1]}" for i in range(len(ni_levels))])
+        ni_level_str = lambda x: f"{x[0]}\n{x[1]}" if len(x) == 2 else f"{x[0]}"
+        plt.xticks(range(len(ni_levels)),[f"{i}\n{ni_level_str(ni_levels[i])}" for i in range(len(ni_levels))])
         
 
     #these pickle can only be opened on same system as it was generated 
