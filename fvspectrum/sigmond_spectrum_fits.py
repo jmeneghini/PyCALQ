@@ -1680,6 +1680,7 @@ class SigmondSpectrumFits:
                             ni = []
                             if this_fit["info"].ratio:
                                 line[-1]+="-ratio"
+                            if self.other_params['non_interacting_levels'][str(channel)] is not None:
                                 ni = self.other_params['non_interacting_levels'][str(channel)][op.level]
                             line+=[f"[{this_fit['info'].tmin},{this_fit['info'].tmax}]"]
                             line+=[format(this_fit["qual"],".2f")]
