@@ -1309,54 +1309,160 @@ def get_possible_spectrum_ni_energies(unique_ni_dict, interacting_channels_list,
 #     print(z_matrix)
 #     return z_matrix # ops x levels
 
-def optimal_per_operator_normalized_assignment(zmags_in_channel, allowed_single_hadrons, get_single_hadrons):
-    # Step 1: Construct Z matrix
-    z_matrix = construct_Z_matrix(zmags_in_channel)
-    n_levels, n_operators = z_matrix.shape  # Levels x Operators
+def optimal_per_operator_normalized_assignment(
+    zmags_in_channel,
+    allowed_single_hadrons,
+    get_single_hadrons,
+    primary_threshold: float = 0.95,
+ ):
+    """Determine the non–interacting (NI) level associated to each finite–volume
+    level using the operator overlap matrix ``zmags_in_channel``.
 
-    # Step 2: Normalize Z matrix per operator
+    The logic is tailored to favour sensible assignments in the presence of
+    single–hadron operators while gracefully falling-back to available NI pairs
+    when required.
+
+    Parameters
+    ----------
+    zmags_in_channel : dict
+        Dictionary as returned by ``SigmondSpectrumFits`` containing the Z-matrix
+        information for a given channel.
+    allowed_single_hadrons : dict
+        Dictionary keyed by strings like ``"pi(0)"`` that are present in the
+        data – essentially the keys of ``self.single_hadron_info``.  These are
+        used to verify that a proposed NI assignment is available.
+    get_single_hadrons : Callable[[str], list[str]]
+        Helper that extracts the list of single hadron strings from an operator
+        identification name.
+    primary_threshold : float, optional
+        Overlap fraction that defines a *sole* overlap.  Defaults to 0.95.
+    """
+
+    import random  # Local import to avoid introducing a new global dependency
+
+    # ------------------------------------------------------------------
+    # Step 1: build and normalise the Z-matrix (levels  ×  operators)
+    # ------------------------------------------------------------------
+    z_matrix = construct_Z_matrix(zmags_in_channel)
+    n_levels, n_ops = z_matrix.shape
+
+    if n_levels == 0 or n_ops == 0:
+        return []
+
     normalized_z = calculate_normalized_Z_matrix(z_matrix)
 
-    # Step 3: Assign single hadrons to operators
-    ops = zmags_in_channel['ops']
-    single_hadrons = [
-        tuple(get_single_hadrons(
-            op.getBasicLapH().getIDName() if op.isBasicLapH() else op.getGenIrrep().getIDName()
-        )) for op in ops
+    # ------------------------------------------------------------------
+    # Step 2: gather operator metadata – list of hadrons
+    # ------------------------------------------------------------------
+    ops = zmags_in_channel["ops"]
+    op_hadrons = []  # list[list[str]] parallel to ops
+    for op in ops:
+        if op.isBasicLapH():
+            id_name = op.getBasicLapH().getIDName()
+        else:
+            id_name = op.getGenIrrep().getIDName()
+        op_hadrons.append(get_single_hadrons(id_name))
+
+    # Determine set of *available* NI pairs in the data.  We consider an NI pair
+    # available if **all** constituent single hadrons are present in
+    # ``allowed_single_hadrons``.
+    available_single_hadrons = set(allowed_single_hadrons.keys())
+
+    available_pairs = set()
+    for hlist in op_hadrons:
+        if len(hlist) == 2:
+            if all(h in available_single_hadrons for h in hlist):
+                available_pairs.add(tuple(sorted(hlist)))
+
+    # Helper to choose a random available NI pair (deterministic fallback if
+    # ``random`` not desired).
+    def pick_random_available_pair():
+        if not available_pairs:
+            return []  # Nothing available – return empty list as last resort
+        return list(random.choice(tuple(available_pairs)))
+
+    # ------------------------------------------------------------------
+    # Step 3: Remove operator columns whose NI constituents are not available
+    # ------------------------------------------------------------------
+
+    valid_op_indices = [
+        idx for idx, hlist in enumerate(op_hadrons)
+        if all(h in available_single_hadrons for h in hlist)
     ]
 
-    # Step 4: Build the cost matrix (Levels x Operators)
-    # Negative normalized Z values for maximization
-    cost_matrix = -normalized_z
+    # If filtering removed everything (unlikely), fall back to all operators
+    if not valid_op_indices:
+        valid_op_indices = list(range(n_ops))
 
-    # Step 5: Solve the Assignment Problem
-    # If the number of levels and operators are unequal, pad the cost matrix
-    num_rows, num_cols = cost_matrix.shape
-    if num_rows != num_cols:
-        # Pad the cost matrix to make it square
-        size = max(num_rows, num_cols)
-        fill_value = np.max(cost_matrix) + 1e6  # Large positive value for padding
-        padded_cost_matrix = np.full((size, size), fill_value)
-        padded_cost_matrix[:num_rows, :num_cols] = cost_matrix
+    z_reduced = normalized_z[:, valid_op_indices]
+    op_hadrons_reduced = [op_hadrons[i] for i in valid_op_indices]
+
+    # ------------------------------------------------------------------
+    # Step 4: Hungarian assignment on reduced matrix
+    # ------------------------------------------------------------------
+
+    cost_matrix = -z_reduced  # maximise overlaps by minimising negative
+
+    n_rows, n_cols = cost_matrix.shape
+    if n_rows != n_cols:
+        size = max(n_rows, n_cols)
+        pad_val = cost_matrix.min() - 1.0
+        padded = np.full((size, size), pad_val)
+        padded[:n_rows, :n_cols] = cost_matrix
     else:
-        padded_cost_matrix = cost_matrix
+        padded = cost_matrix
 
-    # Solve the assignment problem
-    row_ind, col_ind = sp.optimize.linear_sum_assignment(padded_cost_matrix)
+    row_ind, col_ind = sp.optimize.linear_sum_assignment(padded)
 
-    # Extract assignments
-    assignments = []
-    for i, op_idx in zip(row_ind, col_ind):
-        if i < n_levels and op_idx < n_operators:
-            # Assign level i to operator op_idx
-            assignments.append((i, single_hadrons[op_idx]))
+    # Map level -> chosen reduced operator index
+    level_to_red_op = {
+        r: c for r, c in zip(row_ind, col_ind) if r < n_levels and c < n_cols
+    }
 
-    # Sort assignments by level index
-    assignments.sort(key=lambda x: x[0])
-    assigned_single_hadrons = [list(assignment[1]) for assignment in assignments]
+    # ------------------------------------------------------------------
+    # Step 5: Build assignments, adding simple sole-single-hadron rule
+    # ------------------------------------------------------------------
 
-    return assigned_single_hadrons
+    assignments: list[list[str]] = []
+ 
+    for lvl_idx in range(n_levels):
+        red_op_idx = level_to_red_op.get(lvl_idx)
 
+        if red_op_idx is None:
+            # No assignment (should not happen unless matrix padded heavily)
+            assignments.append(pick_random_available_pair())
+            continue
+
+        chosen_hadrons = op_hadrons_reduced[red_op_idx]
+        chosen_overlap = z_reduced[lvl_idx, red_op_idx]
+
+        is_single = len(chosen_hadrons) == 1
+
+        if is_single:
+            if chosen_overlap >= primary_threshold:
+                # confident single hadron
+                assignments.append(chosen_hadrons)
+                continue
+            # otherwise: search next best NI pair
+            ordered_ops = np.argsort(z_reduced[lvl_idx])[::-1]
+            alt_pair = None
+            for op_idx in ordered_ops:
+                if op_idx == red_op_idx:
+                    continue
+                if z_reduced[lvl_idx, op_idx] < primary_threshold:
+                    break  # remaining overlaps too small
+                hlist = op_hadrons_reduced[op_idx]
+                if len(hlist) == 2:  # valid NI pair
+                    alt_pair = hlist
+                    break
+            if alt_pair is not None:
+                assignments.append(alt_pair)
+            else:
+                assignments.append(pick_random_available_pair())
+        else:
+            assignments.append(chosen_hadrons)
+ 
+    return assignments
 
 def construct_Z_matrix(zmags_in_channel):
     n_levels = zmags_in_channel['nlevels']
