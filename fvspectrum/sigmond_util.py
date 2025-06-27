@@ -1442,7 +1442,8 @@ def optimal_per_operator_normalized_assignment(
         chosen_overlap = z_reduced[lvl_idx, red_op_idx]
 
         is_single = len(chosen_hadrons) == 1
-
+        
+        print(z_reduced)
         if is_single:
             if chosen_overlap >= primary_threshold:
                 # confident single hadron
