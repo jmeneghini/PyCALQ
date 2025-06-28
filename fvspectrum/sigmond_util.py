@@ -1461,8 +1461,7 @@ def optimal_per_operator_normalized_assignment(
                     break
             if alt_pair is not None:
                 if alt_pair_overlap >= next_overlap_threshold:
-                    # 
-                    assignments.append(chosen_hadrons)
+                    assignments.append(alt_pair)
                     continue
             else:
                 assignments.append(pick_random_available_pair())
