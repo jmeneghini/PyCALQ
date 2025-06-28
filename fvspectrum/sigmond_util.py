@@ -1313,7 +1313,7 @@ def optimal_per_operator_normalized_assignment(
     zmags_in_channel,
     allowed_single_hadrons,
     get_single_hadrons,
-    next_overlap_threshold: float = 0.05,
+    next_overlap_threshold: float = 0.1,
  ):
     """Determine the non–interacting (NI) level associated to each finite–volume
     level using the operator overlap matrix ``zmags_in_channel``.
@@ -1336,7 +1336,7 @@ def optimal_per_operator_normalized_assignment(
         identification name.
     next_overlap_threshold : float, optional
         Overlap fraction that defines a *sole* single hadron overlap.
-        Important for luscher QC. Defaults to 0.05.
+        Important for luscher QC. Defaults to 0.10.
     """
 
     import random  # Local import to avoid introducing a new global dependency
@@ -1441,13 +1441,11 @@ def optimal_per_operator_normalized_assignment(
             continue
 
         chosen_hadrons = op_hadrons_reduced[red_op_idx]
-        chosen_overlap = z_reduced[lvl_idx, red_op_idx]
 
         is_single = len(chosen_hadrons) == 1
         
         if is_single:
-            print(chosen_overlap)
-            # otherwise: search next best NI pair
+            #search next best NI pair
             ordered_ops = np.argsort(z_reduced[lvl_idx])[::-1]
             alt_pair = None
             alt_pair_overlap = 0.0
@@ -1462,7 +1460,8 @@ def optimal_per_operator_normalized_assignment(
             if alt_pair is not None:
                 if alt_pair_overlap >= next_overlap_threshold:
                     assignments.append(alt_pair)
-                    continue
+                else:
+                    assignments.append(chosen_hadrons)
             else:
                 assignments.append(pick_random_available_pair())
         else:
