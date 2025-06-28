@@ -1313,7 +1313,7 @@ def optimal_per_operator_normalized_assignment(
     zmags_in_channel,
     allowed_single_hadrons,
     get_single_hadrons,
-    primary_threshold: float = 0.95,
+    next_overlap_threshold: float = 0.05,
  ):
     """Determine the non–interacting (NI) level associated to each finite–volume
     level using the operator overlap matrix ``zmags_in_channel``.
@@ -1334,8 +1334,9 @@ def optimal_per_operator_normalized_assignment(
     get_single_hadrons : Callable[[str], list[str]]
         Helper that extracts the list of single hadron strings from an operator
         identification name.
-    primary_threshold : float, optional
-        Overlap fraction that defines a *sole* overlap.  Defaults to 0.95.
+    next_overlap_threshold : float, optional
+        Overlap fraction that defines a *sole* single hadron overlap.
+        Important for luscher QC. Defaults to 0.05.
     """
 
     import random  # Local import to avoid introducing a new global dependency
@@ -1446,22 +1447,23 @@ def optimal_per_operator_normalized_assignment(
         
         if is_single:
             print(chosen_overlap)
-            if chosen_overlap >= primary_threshold:
-                # confident single hadron
-                assignments.append(chosen_hadrons)
-                continue
             # otherwise: search next best NI pair
             ordered_ops = np.argsort(z_reduced[lvl_idx])[::-1]
             alt_pair = None
+            alt_pair_overlap = 0.0
             for op_idx in ordered_ops:
                 if op_idx == red_op_idx:
                     continue
                 hlist = op_hadrons_reduced[op_idx]
                 if len(hlist) == 2:  # valid NI pair
                     alt_pair = hlist
+                    alt_pair_overlap = z_reduced[lvl_idx, op_idx]
                     break
             if alt_pair is not None:
-                assignments.append(alt_pair)
+                if alt_pair_overlap >= next_overlap_threshold:
+                    # 
+                    assignments.append(chosen_hadrons)
+                    continue
             else:
                 assignments.append(pick_random_available_pair())
         else:
