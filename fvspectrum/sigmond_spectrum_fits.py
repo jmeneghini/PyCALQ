@@ -1653,10 +1653,10 @@ class SigmondSpectrumFits:
                 #mom irrep level ecm_ref elab dElab model (tmin,tmax) qual NI
                 if self.other_params['reference_particle']:
                     headers = [r"$d^2$",r"$\Lambda$","Level",rf"$E_{{\textup{{cm}}}}/E_{{latex_rest_mass}}$", r"$a_tE_{\textup{lab}}$", 
-                                        r"$a_t\delta E_{\textup{lab}}$", "Fit Model", "$t$-range", "$p$-val", "NI"]
+                                        r"$a_t\Delta E_{\textup{lab}}$", "Fit Model", "$t$-range", "$p$-val", "NI"]
                 else:
                     headers = [r"$d^2$",r"$\Lambda$","Level",rf"$E_{{\textup{{cm}}}}$", r"$a_tE_{\textup{lab}}$", 
-                                        r"$a_t\delta E_{\textup{lab}}$", "Fit Model", "$t$-range", "$p$-val", "NI"]
+                                        r"$a_t\Delta E_{\textup{lab}}$", "Fit Model", "$t$-range", "$p$-val", "NI"]
                 for channel in self.interacting_channels: #group by isospin and strangeness
                     complete = True
                     channel_data = []

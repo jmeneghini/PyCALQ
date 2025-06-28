@@ -237,7 +237,7 @@ class PlottingHandler:
                 
             yscale = "$a_t "
             if fit_result_info["info"].ratio:
-                yscale+=r"\delta "
+                yscale+=r"\Delta "
             if species is not None:
                 yscale+=f"m_{{{psettings.latex_format[species].replace('$','')}}}"
             elif self.latex:
@@ -460,9 +460,9 @@ class PlottingHandler:
                 
             if reference:
                 latex_rest_mass = psettings.latex_format[reference].replace('$', "")
-                xlabel = rf"$\delta E_{{lab}}/m_{{{latex_rest_mass}}}$" if shift else rf"$E_{{\textup{{cm}}}}/m_{{{latex_rest_mass}}}$"
+                xlabel = rf"$\Delta E_{{lab}}/m_{{{latex_rest_mass}}}$" if shift else rf"$E_{{\textup{{cm}}}}/m_{{{latex_rest_mass}}}$"
             else:
-                xlabel = r"$a_t \delta E_{lab}$" if shift else r"$a_t E_{\textup{cm}}$"
+                xlabel = r"$a_t \Delta E_{lab}$" if shift else r"$a_t E_{\textup{cm}}$"
 
             
             if not shift: # If E_cm, swap x and y labels
