@@ -206,6 +206,7 @@ All task input:
     - psq=0
     - isosinglet S=0 E PSQ=3
     omit_operators: []                    #not required #default []
+    only_operators: []                    #not required #default [] #mutually exclusive with omit_operators
     pivot_type: 0                         #not required #default 0; 0 - single pivot, 1 - rolling pivot
     plot: true                            #not required #default true
     precompute: true                      #not required #default true
@@ -227,6 +228,7 @@ Unique task input descriptions:
 - omit - (list) list of channels to omit. Can be of form "psq=0" for all channels of momentum = 0, and 
                     "isosinglet S=0 E PSQ=3" for a given channel. Ignored if 'only' input is present.
 - omit_operators - (list) list of operators to omit from their channel's pivot
+- only_operators - (list) list of operators to include in their channel's pivot (all others omitted). Mutually exclusive with omit_operators
 - precompute - (bool) Specifies whether the bootstrap samples should be precomputed (within sigmond)
 - rotate_by_samplings - (bool) if true, generates samples and the rotates by samples. If false, rotates by bins
 - used_averaged_bins - (bool) if true, if the program must search the project directory for averaged data, then

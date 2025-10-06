@@ -44,6 +44,7 @@ rotate_corrs:                           #required
   - psq=0
   - isosinglet S=0 E PSQ=3
   omit_operators: []                    #not required #default []
+  only_operators: []                    #not required #default [] #mutually exclusive with omit_operators
   pivot_type: 0                         #not required #default 0; 0 - single pivot, 1 - rolling pivot
   plot: true                            #not required #default true
   precompute: true                      #not required #default true
@@ -128,10 +129,15 @@ class SigmondRotateCorrs:
             'max_condition_number': 150,
             'used_averaged_bins': True, #otherwise samplings
             'omit_operators': [],
+            'only_operators': [],
             'run_tag' : ""
         }
-        sigmond_util.update_params(self.other_params,task_configs) #update other_params with task_params, 
+        sigmond_util.update_params(self.other_params,task_configs) #update other_params with task_params,
                                                                         #otherwise fill in missing task params
+
+        #check mutual exclusivity of only_operators and omit_operators
+        if self.other_params['only_operators'] and self.other_params['omit_operators']:
+            logging.critical("Cannot specify both 'only_operators' and 'omit_operators'. They are mutually exclusive.")
         #get averaged data
         averaged_data_files = []
         if 'averaged_input_correlators_dir' in task_configs:
@@ -245,10 +251,26 @@ class SigmondRotateCorrs:
 
                 initial_operators = self.data_handler.getChannelOperators(channel)
                 initial_operator_strings = [str(op) for op in initial_operators]
-                for op in self.other_params['omit_operators']:
-                    if op in initial_operator_strings:
-                        initial_operators.pop(initial_operator_strings.index(op))
-                        initial_operator_strings.pop(initial_operator_strings.index(op))
+
+                #filter operators based on only_operators or omit_operators
+                if self.other_params['only_operators']:
+                    #keep only the operators specified in only_operators
+                    filtered_operators = []
+                    filtered_operator_strings = []
+                    for op in self.other_params['only_operators']:
+                        if op in initial_operator_strings:
+                            idx = initial_operator_strings.index(op)
+                            filtered_operators.append(initial_operators[idx])
+                            filtered_operator_strings.append(initial_operator_strings[idx])
+                    initial_operators = filtered_operators
+                    initial_operator_strings = filtered_operator_strings
+                elif self.other_params['omit_operators']:
+                    #remove operators specified in omit_operators
+                    for op in self.other_params['omit_operators']:
+                        if op in initial_operator_strings:
+                            initial_operators.pop(initial_operator_strings.index(op))
+                            initial_operator_strings.pop(initial_operator_strings.index(op))
+
                 operators = [op.operator_info for op in initial_operators]
                 self.nlevels[channel] = len(operators)
                 if len(operators)<2:
