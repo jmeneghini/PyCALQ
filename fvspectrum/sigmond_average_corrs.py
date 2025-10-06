@@ -392,8 +392,9 @@ def _getAveragedOperator(operator, averaged_channel, get_had_spat=False, get_had
         logging.warning("Averaging of GIOperators not currently supported.")
         return None
 
+    print(operator.operator_info)
     op_info = operator.operator_info.getBasicLapH()
-    print(op_info.getNumberOfHadrons(), op_info.getFlavor())
+    print(str(op_info))
     if op_info.getNumberOfHadrons() == 1:
         obs_name = f"{NAME_MAP[op_info.getFlavor()]}-{op_info.getHadronSpatialType(1)}_{op_info.getHadronSpatialIdNumber(1)}"
         obs_id = 0
