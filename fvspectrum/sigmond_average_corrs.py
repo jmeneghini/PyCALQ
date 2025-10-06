@@ -391,10 +391,11 @@ def _getAveragedOperator(operator, averaged_channel, get_had_spat=False, get_had
     if operator.operator_type is sigmond.OpKind.GenIrrep:
         logging.warning("Averaging of GIOperators not currently supported.")
         return None
-
-    print(operator.operator_info)
     op_info = operator.operator_info.getBasicLapH()
-    print(str(op_info))
+    xml = op_info.long_xml()
+    # this is an element tree. Convert to string and print
+    import xml.etree.ElementTree as ET
+    print(ET.tostring(xml, encoding='unicode'))
     if op_info.getNumberOfHadrons() == 1:
         obs_name = f"{NAME_MAP[op_info.getFlavor()]}-{op_info.getHadronSpatialType(1)}_{op_info.getHadronSpatialIdNumber(1)}"
         obs_id = 0
