@@ -258,9 +258,13 @@ def get_pivot_info(log_list):
         if os.path.exists(file):
             rotation_log = sigmond_log.RotationLog(file)
             for i in range(rotation_log.num_rotations):
-                channel = rotation_log.channel(i)
-                if channel is None:
-                    logging.warning(f"Skipping pivot info for rotation {i} - channel is None (likely due to operator filtering)")
+                try:
+                    channel = rotation_log.channel(i)
+                    if channel is None:
+                        logging.warning(f"Skipping pivot info for rotation {i} - channel is None (likely due to operator filtering)")
+                        continue
+                except (TypeError, ValueError) as e:
+                    logging.warning(f"Skipping pivot info for rotation {i} - failed to parse channel: {e}")
                     continue
                 pivot_info = {}
                 pivot_info["metric null space check"] = rotation_log.metric_null_space_message(i)
