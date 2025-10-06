@@ -393,6 +393,7 @@ def _getAveragedOperator(operator, averaged_channel, get_had_spat=False, get_had
         return None
 
     op_info = operator.operator_info.getBasicLapH()
+    print(op_info.getNumberOfHadrons(), op_info.getFlavor())
     if op_info.getNumberOfHadrons() == 1:
         obs_name = f"{NAME_MAP[op_info.getFlavor()]}-{op_info.getHadronSpatialType(1)}_{op_info.getHadronSpatialIdNumber(1)}"
         obs_id = 0
