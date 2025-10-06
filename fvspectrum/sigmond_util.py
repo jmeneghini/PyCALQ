@@ -258,13 +258,17 @@ def get_pivot_info(log_list):
         if os.path.exists(file):
             rotation_log = sigmond_log.RotationLog(file)
             for i in range(rotation_log.num_rotations):
+                channel = rotation_log.channel(i)
+                if channel is None:
+                    logging.warning(f"Skipping pivot info for rotation {i} - channel is None (likely due to operator filtering)")
+                    continue
                 pivot_info = {}
                 pivot_info["metric null space check"] = rotation_log.metric_null_space_message(i)
                 pivot_info["metric cond. init."] = rotation_log.metric_condition(i,False)
                 pivot_info["metric cond. init."] = rotation_log.metric_condition(i)
                 pivot_info["matrix cond. init."] = rotation_log.matrix_condition(i,False)
                 pivot_info["matrix cond. init."] = rotation_log.matrix_condition(i)
-                all_pivot_info[rotation_log.channel(i)] = pivot_info
+                all_pivot_info[channel] = pivot_info
     
     return all_pivot_info
 
