@@ -372,6 +372,11 @@ class SigmondRotateCorrs:
         logging.info(f"Log file(s) written to {self.sigmond_rotation_log('*')}")
 
         if os.path.isfile(self.rotated_corrs_file(not self.other_params['rotate_by_samplings'])):
+            #check if there are channels remaining after filtering
+            if not self.channels:
+                logging.critical("No channels remaining after operator filtering. Check your only_operators/omit_operators configuration.")
+                return
+
             #combine and add info to both pivot and data files
             with h5py.File(self.rotated_corrs_file(not self.other_params['rotate_by_samplings']),'r+') as datafile:
                 with h5py.File(self.pivot_file(),'r+') as pivotfile:

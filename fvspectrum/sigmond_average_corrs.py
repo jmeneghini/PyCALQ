@@ -153,6 +153,7 @@ class SigmondAverageCorrs:
                 log_output[str(avchannel)] = {}
             for rawchannel in rawchannels:
                 operators = [op for op in self.data_handler.getChannelOperators(rawchannel)]
+                print(operators)
                 ops_map = _getOperatorsMap(operators, avchannel, self.other_params['average_hadron_spatial_info'], 
                                            self.other_params['average_hadron_irrep_info'])
                 for avop, rawops in ops_map.items():
