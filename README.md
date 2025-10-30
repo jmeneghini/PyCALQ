@@ -8,23 +8,29 @@ Full analysis chain of the finite volume spectrum from two-point correlators to 
 [sigmond pybindings (pip branch)](https://github.com/andrewhanlon/sigmond/tree/pip)
 
 ## Setup
-```
-cd PyCALQ/
+
+Create or activate your preferred Python environment, then install the package and its runtime dependencies:
+
+```bash
 pip install -r requirements.txt
+pip install -e .
 ```
+
 
 ## Sample usage
 
-```
-(base) PS C:\cygwin64\home\sarah\lqcd\luscher-scmuscher> run.py -h
-usage: run.py [-h] [-g GENERAL] [-t TASKS [TASKS ...]]
+```bash
+# Show top-level CLI help
+pycalq -h
 
-options:
-  -h, --help            show this help message and exit
-  -g GENERAL, --general GENERAL
-                        general configuration file
-  -t TASKS [TASKS ...], --tasks TASKS [TASKS ...]
-                        task(s) configuration file(s)
+# Run with a combined full input file
+pycalq run -f path/to/full_input_fit_spectrum.yml
+
+# Run using separate general/tasks configuration files
+pycalq run -g general.yml -t task_fit.yml task_rotate.yml
+
+# Convert an estimates CSV into fit-configuration YAML
+pycalq estimates-to-fit-cfg path/to/estimates.csv
 ```
 
 ## Tasks

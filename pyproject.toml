@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycalq"
+version = "1.0.0"
+description = "Python Correlator Analysis and Luscher Quantization Condition (PyCALQ)"
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "John Meneghini", email = "meneghinijohn@gmail.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Physics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+keywords = ["lattice", "qcd", "physics", "quantum", "chromodynamics", "spectrum", "analysis"]
+requires-python = ">=3.8"
+dependencies = [
+    "aenum>=3.1.15",
+    "h5py>=3.10.0",
+    "matplotlib>=3.5.1",
+    "more-itertools>=8.10.0",
+    "numpy",
+    "ordered-set>=4.1.0",
+    "pandas>=2.1.2",
+    "PyLaTeX>=1.4.2",
+    "PyYAML>=5.4.1",
+    "regex>=2023.10.3",
+    "scipy>=1.8.0",
+    "shutilwhich>=1.1.0",
+    "sortedcontainers>=2.4.0",
+    "soupsieve>=2.3.1",
+    "tqdm>=4.66.1",
+    "uncertainties>=3.1.7",
+    "xmltodict",
+    "pybind11",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "black",
+    "flake8",
+]
+
+[project.scripts]
+pycalq = "pycalq_cli:main"
+
+[project.urls]
+Homepage = "https://github.com/xinucode/PyCALQ"
+Repository = "https://github.com/xinucode/PyCALQ.git"
+Issues = "https://github.com/xinucode/PyCALQ/issues"
+
+[tool.setuptools]
+packages = ["general", "fvspectrum"]
+py-modules = ["pycalq", "pycalq_cli", "run"]
+
+[tool.setuptools.package-data]
+"fvspectrum" = ["sigmond_utils/*.xml", "spectrum_plotting_settings/*.mplstyle"]

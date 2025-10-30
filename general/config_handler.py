@@ -4,6 +4,30 @@ import xmltodict
 import os
 import logging
 
+# YAML include functionality using SafeLoader
+class IncludeLoader(yaml.SafeLoader):
+    """Custom YAML loader that supports !include directive"""
+    def __init__(self, stream):
+        try:
+            self._root = os.path.dirname(stream.name)
+        except AttributeError:
+            self._root = os.path.curdir
+        super().__init__(stream)
+
+def include_constructor(loader, node):
+    """Include file referenced at node."""
+    filename = loader.construct_scalar(node)
+    filepath = os.path.join(loader._root, filename)
+
+    if not os.path.exists(filepath):
+        raise FileNotFoundError(f"Include file not found: {filepath}")
+
+    with open(filepath, 'r') as f:
+        return yaml.load(f, IncludeLoader)
+
+# Add the include constructor to our custom loader
+IncludeLoader.add_constructor('!include', include_constructor)
+
 class ConfigHandler:
 
     def __init__( self, input ):
@@ -15,12 +39,12 @@ class ConfigHandler:
             yaml_file = False; json_file = False; xml_file = False
 
             #try to input as yaml file
-            try: 
+            try:
                 with open(input, 'r') as f:
-                    config_info = yaml.safe_load(f)
+                    config_info = yaml.load(f, IncludeLoader)
                     yaml_file = True
-            except:
-                logging.warning(f"{input} is not a YAML file")
+            except Exception as e:
+                logging.warning(f"{input} is not a YAML file: {str(e)}")
                 
             #try to input as json file
             if not yaml_file: #tested

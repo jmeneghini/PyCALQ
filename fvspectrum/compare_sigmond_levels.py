@@ -192,8 +192,10 @@ class CompareLevels:
                 logging.warning(f"Could not generate {root} plot.")
         
         #make yaml output
-        logging.info(f"Full input written to '{os.path.join(proj_files_handler.log_dir(), 'full_input.yml')}'.")
-        with open( os.path.join(proj_files_handler.log_dir(), 'full_input.yml'), 'w+') as log_file:
+        run_tag = self.other_params.get('run_tag', '') or task_configs.get('run_tag', '')
+        full_input_filepath = proj_files_handler.full_input_file(run_tag)
+        logging.info(f"Full input written to '{full_input_filepath}'.")
+        with open(full_input_filepath, 'w+') as log_file:
             yaml.dump({"general":general_configs, task_name: task_configs}, log_file)
 
     #this task is only designed to plot and compare

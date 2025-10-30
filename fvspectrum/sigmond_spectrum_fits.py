@@ -539,8 +539,10 @@ class SigmondSpectrumFits:
         # print(self.ensemble_info.getLatticeXExtent())
         
         #make yaml output
-        logging.info(f"Full input written to '{os.path.join(proj_files_handler.log_dir(), 'full_input.yml')}'.")
-        with open( os.path.join(proj_files_handler.log_dir(), 'full_input.yml'), 'w+') as log_file:
+        run_tag = self.other_params.get('run_tag', '')
+        full_input_filepath = proj_files_handler.full_input_file(run_tag)
+        logging.info(f"Full input written to '{full_input_filepath}'.")
+        with open(full_input_filepath, 'w+') as log_file:
             yaml.dump({"general":general_configs, task_name: task_configs}, log_file)
 
     def run( self ):
@@ -1453,6 +1455,8 @@ class SigmondSpectrumFits:
 
                         plh.clf()
                         if self.project_handler.nodes:
+                            # Extract lattice time extent once to avoid pickling ensemble_info
+                            lattice_time_extent = self.ensemble_info.getLatticeTimeExtent()
                             pickle_file = ""
                             pdf_file = ""
                             if self.other_params['create_pickles']:
@@ -1462,12 +1466,12 @@ class SigmondSpectrumFits:
 
                             if len(processes)<self.project_handler.nodes:
                                 processes.append(Process(target=plh.sigmond_corrfit_plot_and_save,
-                                                         args=(df, results[op], self.ensemble_info.getLatticeTimeExtent(), 0, None,pickle_file, pdf_file,)))
+                                                         args=(df, results[op], lattice_time_extent, 0, None,pickle_file, pdf_file,)))
                                 processes[-1].start()
                             else:
                                 processes[ip].join()
                                 processes[ip] = Process(target=plh.sigmond_corrfit_plot_and_save,
-                                                        args=(df, results[op], self.ensemble_info.getLatticeTimeExtent(), 0, None,pickle_file, pdf_file,))
+                                                        args=(df, results[op], lattice_time_extent, 0, None,pickle_file, pdf_file,))
                                 processes[ip].start()
                             ip = sigmond_util.update_process_index(ip,self.project_handler.nodes)
                         else:
@@ -1488,6 +1492,8 @@ class SigmondSpectrumFits:
 
                         plh.clf()
                         if self.project_handler.nodes:
+                            # Extract lattice time extent once to avoid pickling ensemble_info
+                            lattice_time_extent = self.ensemble_info.getLatticeTimeExtent()
                             pickle_file = ""
                             pdf_file = ""
                             if self.other_params['create_pickles']:
@@ -1496,12 +1502,12 @@ class SigmondSpectrumFits:
                                 pdf_file = self.proj_files_handler.effen_plot_file( op_name, "pdf")
                             if len(processes)<self.project_handler.nodes:
                                 processes.append(Process(target=plh.sigmond_corrfit_plot_and_save,
-                                                         args=(df, results[op], self.ensemble_info.getLatticeTimeExtent(), 1, this_op,pickle_file, pdf_file,)))
+                                                         args=(df, results[op], lattice_time_extent, 1, this_op,pickle_file, pdf_file,)))
                                 processes[-1].start()
                             else:
                                 processes[ip].join()
                                 processes[ip] = Process(target=plh.sigmond_corrfit_plot_and_save,
-                                                        args=(df, results[op], self.ensemble_info.getLatticeTimeExtent(), 1, this_op,pickle_file, pdf_file,))
+                                                        args=(df, results[op], lattice_time_extent, 1, this_op,pickle_file, pdf_file,))
                                 processes[ip].start()
                             ip = sigmond_util.update_process_index(ip,self.project_handler.nodes)
                         else:

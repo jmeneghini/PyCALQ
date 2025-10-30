@@ -168,6 +168,12 @@ class ProjectDirectoryHandler:
             key += "_"
         return os.path.join(self.data_dir("estimates"),f"{self.task_name}_{key}estimates.csv")
 
+    #filename for full input yaml file
+    def full_input_file(self, run_tag=""):
+        run_tag_suffix = f'_{run_tag}' if run_tag else ''
+        filename = f'full_input_{self.task_name}{run_tag_suffix}.yml'
+        return os.path.join(self.log_dir(), filename)
+
     #file for correlator estimates
     def corr_estimates_file(self,corr):
         return os.path.join(self.data_dir("estimates"), f"{corr}_correlator_estimates.csv")
