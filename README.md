@@ -5,7 +5,7 @@ Full analysis chain of the finite volume spectrum from two-point correlators to 
 
 ## Prerequisites
 
-[sigmond pybindings (pip branch)](https://github.com/andrewhanlon/sigmond/tree/pip)
+[sigmond with pybindings](https://github.com/jmeneghini/sigmond)
 
 ## Setup
 
@@ -309,8 +309,6 @@ Task Input:
         sh1:                                  #user given single hadron name and relevant operator names in a list ordered by
         - operator name                       #increasing integer momenta
         ...
-    single_hadrons_ratio: []              #not required #default [] #set up is like single hadrons, overrides 
-                                            #single_hadrons for correlator division for ratio fit (but nothing else)
     non_interacting_levels:               #not required except for ratio fits, needs single_hadrons specified to function
         channel:                          #"channel" should be replaced with channel name
         - [sh1(d1^2), sh2(d1^2)]              #"sh1" and "sh2" should be replaced with single hadron names specified above

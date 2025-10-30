@@ -4,11 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pycalq"
-version = "1.0.0"
+version = "0.1.0"
 description = "Python Correlator Analysis and Luscher Quantization Condition (PyCALQ)"
 readme = "README.md"
 license = {file = "LICENSE"}
 authors = [
+    {name = "Sarah Skinner"},
     {name = "John Meneghini", email = "meneghinijohn@gmail.com"}
 ]
 classifiers = [
@@ -22,7 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
 ]
-keywords = ["lattice", "qcd", "physics", "quantum", "chromodynamics", "spectrum", "analysis"]
+
 requires-python = ">=3.8"
 dependencies = [
     "aenum>=3.1.15",
@@ -45,20 +46,13 @@ dependencies = [
     "pybind11",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "black",
-    "flake8",
-]
-
 [project.scripts]
 pycalq = "pycalq_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/xinucode/PyCALQ"
-Repository = "https://github.com/xinucode/PyCALQ.git"
-Issues = "https://github.com/xinucode/PyCALQ/issues"
+Homepage = "https://github.com/jmeneghini/PyCALQ"
+Repository = "https://github.com/jmeneghini/PyCALQ.git"
+Issues = "https://github.com/jmeneghini/PyCALQ/issues"
 
 [tool.setuptools]
 packages = ["general", "fvspectrum"]

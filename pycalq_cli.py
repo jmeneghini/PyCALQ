@@ -121,7 +121,7 @@ def setup_parser():
                                           help='Convert estimates CSV to fit configuration YAML')
     _add_estimates_arguments(convert_parser)
 
-    # If no subcommand provided, assume 'run' for backward compatibility
+    # If no subcommand provided, assume 'run'
     return parser
 
 def set_multiprocessing_start_method():
