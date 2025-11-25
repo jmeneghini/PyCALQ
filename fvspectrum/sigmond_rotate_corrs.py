@@ -64,9 +64,7 @@ class SigmondRotateCorrs:
         return doc
 
     # data file for rotated data, samplings or bins
-    def rotated_corrs_file(
-        self, binned, channel=None, index=None
-    ):  # add rotation info, and then average info
+    def rotated_corrs_file(self, binned, channel=None, index=None):  # add rotation info, and then average info
         run_tag = self.other_params["run_tag"]
         if index is not None:
             run_tag += f"-{index}"
@@ -115,13 +113,9 @@ class SigmondRotateCorrs:
 
     # pivot condition number and other details are included here
     def sigmond_rotation_log(self, il):
-        return os.path.join(
-            self.proj_file_handler.log_dir(), f"sigmond_rotation_log-{il}.xml"
-        )
+        return os.path.join(self.proj_file_handler.log_dir(), f"sigmond_rotation_log-{il}.xml")
 
-    def __init__(
-        self, task_name, proj_file_handler, general_configs, task_configs, sph
-    ):
+    def __init__(self, task_name, proj_file_handler, general_configs, task_configs, sph):
         self.task_name = task_name
         self.proj_file_handler = proj_file_handler
 
@@ -130,9 +124,7 @@ class SigmondRotateCorrs:
         # establish rotation parameters
         for param in ["t0", "tN", "tD"]:
             if param not in task_configs:
-                logging.critical(
-                    f"No default '{param}' set for '{task_name}'. Ending task."
-                )
+                logging.critical(f"No default '{param}' set for '{task_name}'. Ending task.")
 
         self.t0 = task_configs["t0"]
         self.tN = task_configs["tN"]
@@ -158,29 +150,21 @@ class SigmondRotateCorrs:
             "only_operators": [],
             "run_tag": "",
         }
-        sigmond_util.update_params(
-            self.other_params, task_configs
-        )  # update other_params with task_params,
+        sigmond_util.update_params(self.other_params, task_configs)  # update other_params with task_params,
         # otherwise fill in missing task params
 
         # check mutual exclusivity of only_operators and omit_operators
         if self.other_params["only_operators"] and self.other_params["omit_operators"]:
-            logging.critical(
-                "Cannot specify both 'only_operators' and 'omit_operators'. They are mutually exclusive."
-            )
+            logging.critical("Cannot specify both 'only_operators' and 'omit_operators'. They are mutually exclusive.")
         # get averaged data
         averaged_data_files = []
         if "averaged_input_correlators_dir" in task_configs:
             if type(task_configs["averaged_input_correlators_dir"]) == list:
                 averaged_data_files = task_configs["averaged_input_correlators_dir"]
             else:
-                averaged_data_files.append(
-                    task_configs["averaged_input_correlators_dir"]
-                )
+                averaged_data_files.append(task_configs["averaged_input_correlators_dir"])
         else:
-            if (
-                self.project_handler.project_info.sampling_info.isJackknifeMode()
-            ):  # do this better
+            if self.project_handler.project_info.sampling_info.isJackknifeMode():  # do this better
                 sampling_mode = "J"
             else:
                 sampling_mode = "B"
@@ -202,9 +186,7 @@ class SigmondRotateCorrs:
         for channel in final_channels:
             if len(self.data_handler.getAveragedOperators(channel)) < 2:
                 unqual_channels.append(channel)
-                logging.info(
-                    f"Skipping {str(channel)} because there is an insufficient number of operators."
-                )
+                logging.info(f"Skipping {str(channel)} because there is an insufficient number of operators.")
         remove_channels += unqual_channels
         final_channels = list(set(final_channels) - set(unqual_channels))
         self.project_handler.remove_averaged_data_channels(remove_channels)
@@ -254,14 +236,9 @@ class SigmondRotateCorrs:
             chunked_channels = []
             if len(final_channels) > 0:
                 chunk_size = math.ceil(len(final_channels) / nodes)
-                chunk_size = (
-                    chunk_size
-                    if chunk_size <= len(final_channels)
-                    else len(final_channels)
-                )
+                chunk_size = chunk_size if chunk_size <= len(final_channels) else len(final_channels)
                 chunked_channels = [
-                    final_channels[i : i + chunk_size]
-                    for i in range(0, len(final_channels), chunk_size)
+                    final_channels[i : i + chunk_size] for i in range(0, len(final_channels), chunk_size)
                 ]
             chunked_channels.insert(0, [initial_channel])
 
@@ -288,21 +265,14 @@ class SigmondRotateCorrs:
             # loop through channels, set up sigmond input
             file_created = False
             for channel in channels:
-                if (
-                    self.other_params["tmax"] == None
-                    and self.other_params["tmin"] == None
-                ):
-                    self.other_params["tmin"], self.other_params["tmax"] = (
-                        self.data_handler.getChannelsLargestTRange(channel)
+                if self.other_params["tmax"] == None and self.other_params["tmin"] == None:
+                    self.other_params["tmin"], self.other_params["tmax"] = self.data_handler.getChannelsLargestTRange(
+                        channel
                     )
                 elif self.other_params["tmax"] == None:
-                    _, self.other_params["tmax"] = (
-                        self.data_handler.getChannelsLargestTRange(channel)
-                    )
+                    _, self.other_params["tmax"] = self.data_handler.getChannelsLargestTRange(channel)
                 elif self.other_params["tmin"] == None:
-                    self.other_params["tmin"], _ = (
-                        self.data_handler.getChannelsLargestTRange(channel)
-                    )
+                    self.other_params["tmin"], _ = self.data_handler.getChannelsLargestTRange(channel)
 
                 if file_created:
                     wmode = sigmond.WriteMode.Update
@@ -323,9 +293,7 @@ class SigmondRotateCorrs:
                         if op in initial_operator_strings:
                             idx = initial_operator_strings.index(op)
                             filtered_operators.append(initial_operators[idx])
-                            filtered_operator_strings.append(
-                                initial_operator_strings[idx]
-                            )
+                            filtered_operator_strings.append(initial_operator_strings[idx])
                     initial_operators = filtered_operators
                     initial_operator_strings = filtered_operator_strings
                 elif self.other_params["omit_operators"]:
@@ -333,16 +301,12 @@ class SigmondRotateCorrs:
                     for op in self.other_params["omit_operators"]:
                         if op in initial_operator_strings:
                             initial_operators.pop(initial_operator_strings.index(op))
-                            initial_operator_strings.pop(
-                                initial_operator_strings.index(op)
-                            )
+                            initial_operator_strings.pop(initial_operator_strings.index(op))
 
                 operators = [op.operator_info for op in initial_operators]
                 self.nlevels[channel] = len(operators)
                 if len(operators) < 2:
-                    logging.info(
-                        f"Skipping {str(channel)} because there is an insufficient number of operators."
-                    )
+                    logging.info(f"Skipping {str(channel)} because there is an insufficient number of operators.")
                     skip_channels.append(channel)
                     continue
 
@@ -362,9 +326,7 @@ class SigmondRotateCorrs:
                         max_condition_number=self.other_params["max_condition_number"],
                     ),
                     sigmond_info.RotateMode(rotate_mode),
-                    sigmond.CorrelatorMatrixInfo(
-                        operators, self.project_handler.hermitian, sub_vev
-                    ),
+                    sigmond.CorrelatorMatrixInfo(operators, self.project_handler.hermitian, sub_vev),
                     operator.Operator(channel.getRotatedOp()),
                     self.other_params["tmin"],
                     self.other_params["tmax"],
@@ -394,9 +356,7 @@ class SigmondRotateCorrs:
             setuptaskhandler.set_from_string(task_input.to_str())
 
             with open(
-                os.path.join(
-                    self.proj_file_handler.log_dir(), "sigmond_rotation_input.xml"
-                ),
+                os.path.join(self.proj_file_handler.log_dir(), "sigmond_rotation_input.xml"),
                 write_method,
             ) as f:
                 f.write(setuptaskhandler.output(1))
@@ -404,11 +364,7 @@ class SigmondRotateCorrs:
             # do the rotations
             taskhandlers.append(sigmond.TaskHandler(setuptaskhandler))
             if nodes > 1:
-                processes.append(
-                    Process(
-                        target=taskhandlers[-1].do_batch_tasks, args=(setuptaskhandler,)
-                    )
-                )
+                processes.append(Process(target=taskhandlers[-1].do_batch_tasks, args=(setuptaskhandler,)))
                 processes[-1].start()
             else:
                 taskhandlers[-1].do_batch_tasks(setuptaskhandler)
@@ -425,20 +381,12 @@ class SigmondRotateCorrs:
         del taskhandlers
 
         # combine datafiles
-        with h5py.File(
-            self.rotated_corrs_file(not self.other_params["rotate_by_samplings"]), "w"
-        ) as datafile:
+        with h5py.File(self.rotated_corrs_file(not self.other_params["rotate_by_samplings"]), "w") as datafile:
             with h5py.File(self.pivot_file(), "w") as pivotfile:
                 for i in range(il):
-                    if os.path.exists(
-                        self.rotated_corrs_file(
-                            not self.other_params["rotate_by_samplings"], None, i
-                        )
-                    ):
+                    if os.path.exists(self.rotated_corrs_file(not self.other_params["rotate_by_samplings"], None, i)):
                         with h5py.File(
-                            self.rotated_corrs_file(
-                                not self.other_params["rotate_by_samplings"], None, i
-                            ),
+                            self.rotated_corrs_file(not self.other_params["rotate_by_samplings"], None, i),
                             "r",
                         ) as datafilei:
                             # datafilei.flush()
@@ -451,17 +399,11 @@ class SigmondRotateCorrs:
                                         datafile["/"],
                                         repr(channel),
                                     )
-                        os.remove(
-                            self.rotated_corrs_file(
-                                not self.other_params["rotate_by_samplings"], None, i
-                            )
-                        )
+                        os.remove(self.rotated_corrs_file(not self.other_params["rotate_by_samplings"], None, i))
                     if os.path.exists(self.pivot_file(None, i)):
                         with h5py.File(self.pivot_file(None, i), "r") as pivotfilei:
                             if i == 0:
-                                pivotfilei.copy(
-                                    pivotfilei["Info"], pivotfile["/"], "Info"
-                                )
+                                pivotfilei.copy(pivotfilei["Info"], pivotfile["/"], "Info")
                             for channel in self.channels:
                                 if repr(channel) in pivotfilei.keys():
                                     pivotfilei.copy(
@@ -477,9 +419,7 @@ class SigmondRotateCorrs:
         )
         if os.path.isfile(self.pivot_file()):
             logging.info(f"Pivot matrix written to {self.pivot_file()}.")  # add FAIR
-        if os.path.isfile(
-            self.rotated_corrs_file(not self.other_params["rotate_by_samplings"])
-        ):
+        if os.path.isfile(self.rotated_corrs_file(not self.other_params["rotate_by_samplings"])):
             logging.info(
                 f"Rotated correlators written to {self.rotated_corrs_file(not self.other_params['rotate_by_samplings'])}."
             )  # add FAIR
@@ -487,9 +427,7 @@ class SigmondRotateCorrs:
             self.other_params["plot"] = False
         logging.info(f"Log file(s) written to {self.sigmond_rotation_log('*')}")
 
-        if os.path.isfile(
-            self.rotated_corrs_file(not self.other_params["rotate_by_samplings"])
-        ):
+        if os.path.isfile(self.rotated_corrs_file(not self.other_params["rotate_by_samplings"])):
             # check if there are channels remaining after filtering
             if not self.channels:
                 logging.critical(
@@ -513,50 +451,29 @@ class SigmondRotateCorrs:
             # generate estimates for writing to file and/or plotting
             if self.other_params["plot"] or self.other_params["generate_estimates"]:
                 self.project_handler.add_rotated_data(
-                    [
-                        self.rotated_corrs_file(
-                            not self.other_params["rotate_by_samplings"]
-                        )
-                    ]
+                    [self.rotated_corrs_file(not self.other_params["rotate_by_samplings"])]
                 )
                 mcobs_handler, mcobs_get_handler = sigmond_util.get_mcobs_handlers(
                     self.data_handler, self.project_handler.project_info
                 )
 
-            if (
-                self.other_params["plot"]
-                and not self.other_params["generate_estimates"]
-            ):
+            if self.other_params["plot"] and not self.other_params["generate_estimates"]:
                 self.rotated_estimates = {}
             if self.other_params["generate_estimates"] or self.other_params["plot"]:
-                logging.info(
-                    f"Generating estimates for {self.proj_file_handler.data_dir('estimates')}..."
-                )
+                logging.info(f"Generating estimates for {self.proj_file_handler.data_dir('estimates')}...")
                 for channel in self.channels:
-                    sub_vev = sigmond_util.do_subtract_vev(
-                        channel, self.project_handler
-                    )
+                    sub_vev = sigmond_util.do_subtract_vev(channel, self.project_handler)
 
-                    if (
-                        self.other_params["plot"]
-                        and not self.other_params["generate_estimates"]
-                    ):
+                    if self.other_params["plot"] and not self.other_params["generate_estimates"]:
                         self.rotated_estimates[str(channel)] = {}
-                    logging.info(
-                        f"\tGenerating estimates for channel {str(channel)}..."
-                    )
+                    logging.info(f"\tGenerating estimates for channel {str(channel)}...")
                     for i in range(self.nlevels[channel]):
                         for j in range(self.nlevels[channel]):
                             rop1 = operator.Operator(channel.getRotatedOp(i))
                             rop2 = operator.Operator(channel.getRotatedOp(j))
-                            corr = sigmond.CorrelatorInfo(
-                                rop1.operator_info, rop2.operator_info
-                            )
+                            corr = sigmond.CorrelatorInfo(rop1.operator_info, rop2.operator_info)
                             corr_name = repr(corr).replace(" ", "-")
-                            if (
-                                self.other_params["plot"]
-                                and not self.other_params["generate_estimates"]
-                            ):
+                            if self.other_params["plot"] and not self.other_params["generate_estimates"]:
                                 self.rotated_estimates[str(channel)][corr] = {}
 
                             estimates = sigmond.getCorrelatorEstimates(
@@ -571,24 +488,14 @@ class SigmondRotateCorrs:
                                 if estimates:
                                     sigmond_util.estimates_to_csv(
                                         estimates,
-                                        self.proj_file_handler.corr_estimates_file(
-                                            corr_name
-                                        ),
+                                        self.proj_file_handler.corr_estimates_file(corr_name),
                                     )
                                 else:
-                                    if os.path.exists(
-                                        self.proj_file_handler.corr_estimates_file(
-                                            corr_name
-                                        )
-                                    ):
-                                        os.remove(
-                                            self.proj_file_handler.corr_estimates_file(
-                                                corr_name
-                                            )
-                                        )
+                                    if os.path.exists(self.proj_file_handler.corr_estimates_file(corr_name)):
+                                        os.remove(self.proj_file_handler.corr_estimates_file(corr_name))
                             elif self.other_params["plot"]:
-                                self.rotated_estimates[str(channel)][corr]["corr"] = (
-                                    sigmond_util.estimates_to_df(estimates)
+                                self.rotated_estimates[str(channel)][corr]["corr"] = sigmond_util.estimates_to_df(
+                                    estimates
                                 )
                             if not estimates:
                                 logging.warning(f"No data found for {repr(corr)}.")
@@ -608,31 +515,19 @@ class SigmondRotateCorrs:
                                 if estimates:
                                     sigmond_util.estimates_to_csv(
                                         estimates,
-                                        self.proj_file_handler.effen_estimates_file(
-                                            corr_name
-                                        ),
+                                        self.proj_file_handler.effen_estimates_file(corr_name),
                                     )
                                 else:
-                                    if os.path.exists(
-                                        self.proj_file_handler.effen_estimates_file(
-                                            corr_name
-                                        )
-                                    ):
-                                        os.remove(
-                                            self.proj_file_handler.effen_estimates_file(
-                                                corr_name
-                                            )
-                                        )
+                                    if os.path.exists(self.proj_file_handler.effen_estimates_file(corr_name)):
+                                        os.remove(self.proj_file_handler.effen_estimates_file(corr_name))
                             elif self.other_params["plot"]:
-                                self.rotated_estimates[str(channel)][corr]["effen"] = (
-                                    sigmond_util.estimates_to_df(estimates)
+                                self.rotated_estimates[str(channel)][corr]["effen"] = sigmond_util.estimates_to_df(
+                                    estimates
                                 )
 
     def plot(self):
         if self.other_params["plot"]:
-            logging.info(
-                f"Saving plots to directory {self.proj_file_handler.plot_dir()}..."
-            )
+            logging.info(f"Saving plots to directory {self.proj_file_handler.plot_dir()}...")
         else:
             logging.info(f"No plots requested.")
             return
@@ -646,13 +541,8 @@ class SigmondRotateCorrs:
             self.generate_channel_plots(self.channels, plh)
         else:
             chunk_size = math.ceil(len(self.channels) / self.project_handler.nodes)
-            chunk_size = (
-                chunk_size if chunk_size <= len(self.channels) else len(self.channels)
-            )
-            chunked_channels = [
-                self.channels[i : i + chunk_size]
-                for i in range(0, len(self.channels), chunk_size)
-            ]
+            chunk_size = chunk_size if chunk_size <= len(self.channels) else len(self.channels)
+            chunked_channels = [self.channels[i : i + chunk_size] for i in range(0, len(self.channels), chunk_size)]
             processes = []
             for channels in chunked_channels:
                 processes.append(
@@ -695,9 +585,7 @@ class SigmondRotateCorrs:
                 for i, j in corr_order:
                     rop1 = operator.Operator(channel.getRotatedOp(i))
                     rop2 = operator.Operator(channel.getRotatedOp(j))
-                    corr = sigmond.CorrelatorInfo(
-                        rop1.operator_info, rop2.operator_info
-                    )
+                    corr = sigmond.CorrelatorInfo(rop1.operator_info, rop2.operator_info)
                     corr_name = repr(corr).replace(" ", "-")
                     if i == j:
                         corr_title = str(rop1)
@@ -711,9 +599,7 @@ class SigmondRotateCorrs:
 
             # compile summary file
             plh.compile_pdf(self.proj_file_handler.summary_file())
-            logging.info(
-                f"Summary file saved to {self.proj_file_handler.summary_file()}.pdf."
-            )
+            logging.info(f"Summary file saved to {self.proj_file_handler.summary_file()}.pdf.")
 
     # generates matplotlib plots for a set of channels
     def generate_channel_plots(self, channels, plh):
@@ -745,12 +631,8 @@ class SigmondRotateCorrs:
                     if df.empty:
                         continue
                 else:
-                    if os.path.exists(
-                        self.proj_file_handler.corr_estimates_file(corr_name)
-                    ):
-                        df = pd.read_csv(
-                            self.proj_file_handler.corr_estimates_file(corr_name)
-                        )
+                    if os.path.exists(self.proj_file_handler.corr_estimates_file(corr_name)):
+                        df = pd.read_csv(self.proj_file_handler.corr_estimates_file(corr_name))
                     else:
                         continue
 
@@ -758,41 +640,23 @@ class SigmondRotateCorrs:
                 plh.correlator_plot(df, 0)  # , rop1, rop2) #0 for regular corr plot
 
                 if self.other_params["create_pickles"]:
-                    plh.save_pickle(
-                        self.proj_file_handler.corr_plot_file(corr_name, "pickle")
-                    )
-                if (
-                    self.other_params["create_pdfs"]
-                    or self.other_params["create_summary"]
-                ):
-                    plh.save_pdf(
-                        self.proj_file_handler.corr_plot_file(corr_name, "pdf")
-                    )
+                    plh.save_pickle(self.proj_file_handler.corr_plot_file(corr_name, "pickle"))
+                if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
+                    plh.save_pdf(self.proj_file_handler.corr_plot_file(corr_name, "pdf"))
 
                 try:
                     if not self.other_params["generate_estimates"]:
                         df = self.rotated_estimates[str(channel)][corr]["effen"]
                     else:
-                        df = pd.read_csv(
-                            self.proj_file_handler.effen_estimates_file(corr_name)
-                        )
+                        df = pd.read_csv(self.proj_file_handler.effen_estimates_file(corr_name))
 
                     plh.clf()
-                    plh.correlator_plot(
-                        df, 1
-                    )  # , rop1, rop2) #1 for effective energy plot
+                    plh.correlator_plot(df, 1)  # , rop1, rop2) #1 for effective energy plot
 
                     if self.other_params["create_pickles"]:
-                        plh.save_pickle(
-                            self.proj_file_handler.effen_plot_file(corr_name, "pickle")
-                        )
-                    if (
-                        self.other_params["create_pdfs"]
-                        or self.other_params["create_summary"]
-                    ):
-                        plh.save_pdf(
-                            self.proj_file_handler.effen_plot_file(corr_name, "pdf")
-                        )
+                        plh.save_pickle(self.proj_file_handler.effen_plot_file(corr_name, "pickle"))
+                    if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
+                        plh.save_pdf(self.proj_file_handler.effen_plot_file(corr_name, "pdf"))
                 except FileNotFoundError as err:
                     pass
                 except KeyError as err:

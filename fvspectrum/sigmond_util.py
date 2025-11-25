@@ -57,9 +57,7 @@ class ProjectInfo(NamedTuple):
 class CompactListDumper(yaml.Dumper):
     def represent_mapping(self, tag, mapping, flow_style=None):
         # Outer structures remain block style
-        return super(CompactListDumper, self).represent_mapping(
-            tag, mapping, flow_style=False
-        )
+        return super(CompactListDumper, self).represent_mapping(tag, mapping, flow_style=False)
 
     def represent_list(self, data):
         # Nested lists are always in flow style
@@ -70,20 +68,14 @@ class CompactListDumper(yaml.Dumper):
 def check_raw_data_files(raw_data_files, project_dir):
     # check that raw_data_files are real files
     if not raw_data_files:
-        logging.critical(
-            "No directory to view. Add 'raw_data_files' to 'view_data' task parameters."
-        )
+        logging.critical("No directory to view. Add 'raw_data_files' to 'view_data' task parameters.")
     if type(raw_data_files) != list:
         if os.path.isdir(raw_data_files) or os.path.isfile(raw_data_files):
             raw_data_files = [raw_data_files]
         else:
             logging.critical("Parameter 'raw_data_files' must be a real directory.")
     else:
-        filtered_raw_data_files = list(
-            filter(
-                lambda file: os.path.isdir(file) or os.path.isfile(file), raw_data_files
-            )
-        )
+        filtered_raw_data_files = list(filter(lambda file: os.path.isdir(file) or os.path.isfile(file), raw_data_files))
         if filtered_raw_data_files != raw_data_files:
             logging.critical("Item in 'raw_data_files' must be a real files.")
         raw_data_files = filtered_raw_data_files
@@ -104,9 +96,7 @@ def check_raw_data_files(raw_data_files, project_dir):
 # general_params
 def get_ensemble_info(general_params):
     # check for ensembles file
-    ensemble_file_path = os.path.join(
-        os.path.dirname(__file__), "sigmond_utils", "ensembles.xml"
-    )
+    ensemble_file_path = os.path.join(os.path.dirname(__file__), "sigmond_utils", "ensembles.xml")
     if not os.path.isfile(ensemble_file_path):
         logging.error("Ensembles file cannot be found.")
 
@@ -120,9 +110,7 @@ def get_ensemble_info(general_params):
     general_params["ensembles_file"] = ensemble_file_path
 
     # get bins info
-    ensemble_info = sigmond.MCEnsembleInfo(
-        general_params["ensemble_id"], ensemble_file_path
-    )
+    ensemble_info = sigmond.MCEnsembleInfo(general_params["ensemble_id"], ensemble_file_path)
     return ensemble_info
 
 
@@ -137,13 +125,9 @@ def setup_project(general_params, raw_data_files=[]):
             new_bins_info = ET.Element("MCBinsInfo")
             new_bins_info.append(ensemble_info.xml())
             tweaks = ET.SubElement(new_bins_info, "TweakEnsemble")
-            ET.SubElement(tweaks, "KeepFirst").text = str(
-                bins_info_config["keep_first"]
-            )
+            ET.SubElement(tweaks, "KeepFirst").text = str(bins_info_config["keep_first"])
             ET.SubElement(tweaks, "KeepLast").text = str(bins_info_config["keep_last"])
-            bins_info = sigmond.MCBinsInfo(
-                sigmond.XMLHandler().set_from_string(ET.tostring(new_bins_info))
-            )
+            bins_info = sigmond.MCBinsInfo(sigmond.XMLHandler().set_from_string(ET.tostring(new_bins_info)))
         else:
             bins_info = sigmond.MCBinsInfo(ensemble_info)
             bins_info.setRebin(bins_info_config.get("rebin", 1))
@@ -158,9 +142,7 @@ def setup_project(general_params, raw_data_files=[]):
     if "sampling_info" in general_params.keys():
         sampling_info_config = general_params["sampling_info"]
         try:
-            sampling_mode = sigmond.SamplingMode.create(
-                sampling_info_config["mode"].lower()
-            )
+            sampling_mode = sigmond.SamplingMode.create(sampling_info_config["mode"].lower())
         except KeyError as err:
             logging.critical("Unknown sampling mode {}".format(err))
 
@@ -221,15 +203,11 @@ def set_latex_in_plots(style_import):
             )
         )
     except:
-        logging.warning(
-            "Spectrum style file has been moved or corrupted. Please consider reinstalling PyCALQ."
-        )
+        logging.warning("Spectrum style file has been moved or corrupted. Please consider reinstalling PyCALQ.")
 
     if not shutil.which("latex"):
         matplotlib.rcParams["text.usetex"] = False
-        logging.warning(
-            "Latex not found on system, please install latex to get nice looking matplotlib plots."
-        )
+        logging.warning("Latex not found on system, please install latex to get nice looking matplotlib plots.")
         return False
     return True
 
@@ -249,9 +227,7 @@ def update_params(other_params, task_params):
 # else mcobs_handler does not work
 def get_data_handlers(project_info):
     this_data_handler = data_handler.DataHandler(project_info)
-    mcobs_handler, mcobs_get_handler = get_mcobs_handlers(
-        this_data_handler, project_info
-    )
+    mcobs_handler, mcobs_get_handler = get_mcobs_handlers(this_data_handler, project_info)
     return this_data_handler, mcobs_handler, mcobs_get_handler
 
 
@@ -272,10 +248,7 @@ def get_mcobs_handlers(this_data_handler, project_info, additional_sampling_file
         ):
             flist = filename.xml()
             bl_corr_xml.insert(1, flist)
-    if (
-        this_data_handler.raw_data_files.bl_vev_files
-        or this_data_handler.averaged_data_files.bl_vev_files
-    ):
+    if this_data_handler.raw_data_files.bl_vev_files or this_data_handler.averaged_data_files.bl_vev_files:
         bl_vev_files_xml = ET.SubElement(mcobs_handler_init, "BLVEVData")
         # file list info
     if (
@@ -307,9 +280,7 @@ def get_mcobs_handlers(this_data_handler, project_info, additional_sampling_file
 
     mcobs_init = sigmond.XMLHandler()
     mcobs_init.set_from_string(ET.tostring(mcobs_handler_init).decode())
-    mcobs_get_handler = sigmond.MCObsGetHandler(
-        mcobs_init, project_info.bins_info, project_info.sampling_info
-    )
+    mcobs_get_handler = sigmond.MCObsGetHandler(mcobs_init, project_info.bins_info, project_info.sampling_info)
     mcobs_handler = sigmond.MCObsHandler(mcobs_get_handler, project_info.precompute)
     mcobs_handler.setSamplingBegin()
 
@@ -356,21 +327,13 @@ def get_pivot_info(log_list):
                         )
                         continue
                 except (TypeError, ValueError) as e:
-                    logging.warning(
-                        f"Skipping pivot info for rotation {i} - failed to parse channel: {e}"
-                    )
+                    logging.warning(f"Skipping pivot info for rotation {i} - failed to parse channel: {e}")
                     continue
                 pivot_info = {}
-                pivot_info["metric null space check"] = (
-                    rotation_log.metric_null_space_message(i)
-                )
-                pivot_info["metric cond. init."] = rotation_log.metric_condition(
-                    i, False
-                )
+                pivot_info["metric null space check"] = rotation_log.metric_null_space_message(i)
+                pivot_info["metric cond. init."] = rotation_log.metric_condition(i, False)
                 pivot_info["metric cond. init."] = rotation_log.metric_condition(i)
-                pivot_info["matrix cond. init."] = rotation_log.matrix_condition(
-                    i, False
-                )
+                pivot_info["matrix cond. init."] = rotation_log.matrix_condition(i, False)
                 pivot_info["matrix cond. init."] = rotation_log.matrix_condition(i)
                 all_pivot_info[channel] = pivot_info
 
@@ -436,9 +399,7 @@ def sigmond_fit(
     elif fit_configs["sim_fit"]:
         fittype = "NSimTemporalCorrelatorFit/Fits/TemporalCorrelatorFit"
 
-    task_input.doTemporalCorrelatorFit(
-        this_fit_info, **fit_options
-    )  # add input for ni level priors
+    task_input.doTemporalCorrelatorFit(this_fit_info, **fit_options)  # add input for ni level priors
 
     task_xml = task_input.sigmondXML
     if delete_samplings:
@@ -502,22 +463,14 @@ def sigmond_fit(
         )
 
     attempts = []
-    if (
-        fit_configs["tmin_try_min"]
-        and fit_configs["tmin_try_max"]
-        and not delete_samplings
-    ):
+    if fit_configs["tmin_try_min"] and fit_configs["tmin_try_max"] and not delete_samplings:
         attempts += list(range(fit_configs["tmin"], fit_configs["tmin_try_max"] + 1))
-        attempts += list(
-            range(fit_configs["tmin"] - 1, fit_configs["tmin_try_min"] - 1, -1)
-        )
+        attempts += list(range(fit_configs["tmin"] - 1, fit_configs["tmin_try_min"] - 1, -1))
 
     if attempts:
         for attempt in attempts:
             if attempt != fit_configs["tmin"]:
-                task_xml.find(
-                    f"TaskSequence/Task/{fittype}/MinimumTimeSeparation"
-                ).text = str(attempt)
+                task_xml.find(f"TaskSequence/Task/{fittype}/MinimumTimeSeparation").text = str(attempt)
                 old_obs_name = this_fit_info.obs_name
                 this_fit_info.tmin = attempt
                 obs_list = task_xml.findall(f"TaskSequence/Task/{fittype}/Model/*/Name")
@@ -541,9 +494,7 @@ def sigmond_fit(
             log_xml = sigmond.XMLHandler("FitLogFile")
 
             try:
-                best_fit_results = sigmond.doChiSquareFitting(
-                    RTC, this_minimizer_info, chisqr, qual, log_xml
-                )
+                best_fit_results = sigmond.doChiSquareFitting(RTC, this_minimizer_info, chisqr, qual, log_xml)
                 if attempt != fit_configs["tmin"]:
                     # this_fit_info.tmin = attempt
                     logging.warning(
@@ -577,9 +528,7 @@ def sigmond_fit(
         log_xml = sigmond.XMLHandler("FitLogFile")
 
         try:
-            best_fit_results = sigmond.doChiSquareFitting(
-                RTC, this_minimizer_info, chisqr, qual, log_xml
-            )
+            best_fit_results = sigmond.doChiSquareFitting(RTC, this_minimizer_info, chisqr, qual, log_xml)
         except Exception as err:
             if not delete_samplings:
                 f = open(logfile, "w+")
@@ -664,9 +613,7 @@ def sigmond_multi_exp_fit(
             these_priors = {}
             initial_params = []
             if best_tmin[level] >= 0 and best_chisqrdof[level] <= max_chisqr:
-                initial_params = [
-                    est.getFullEstimate() for est in best_estimates[level]
-                ]
+                initial_params = [est.getFullEstimate() for est in best_estimates[level]]
             # if level>=1:
             #     these_priors['FirstEnergy'] = {
             #         'Mean': best_estimates[level-1][0].getFullEstimate(),
@@ -679,16 +626,14 @@ def sigmond_multi_exp_fit(
             if level >= 2:
                 these_priors["SqrtGapToSecondEnergy"] = {
                     "Mean": best_estimates[level - 1][2].getFullEstimate(),
-                    "Error": conflate_factor
-                    * best_estimates[level - 1][2].getSymmetricError(),
+                    "Error": conflate_factor * best_estimates[level - 1][2].getSymmetricError(),
                 }
                 # initial_params = [est.getFullEstimate() for est in best_estimates[level-1]]
                 # initial_params += [2.0*best_estimates[level-1][2].getFullEstimate(), 1.0]
             if level >= 3:
                 these_priors["SqrtGapToThirdEnergy"] = {
                     "Mean": best_estimates[level - 1][4].getFullEstimate(),
-                    "Error": conflate_factor
-                    * best_estimates[level - 1][4].getSymmetricError(),
+                    "Error": conflate_factor * best_estimates[level - 1][4].getSymmetricError(),
                 }
 
             # min_chisqr = 1000000
@@ -717,21 +662,15 @@ def sigmond_multi_exp_fit(
                 fittype = "TemporalCorrelatorFit"
 
                 task_input.clearTasks()
-                task_input.doTemporalCorrelatorFit(
-                    this_fit_info, **fit_options
-                )  # add input for ni level priors
+                task_input.doTemporalCorrelatorFit(this_fit_info, **fit_options)  # add input for ni level priors
 
                 task_xml = task_input.sigmondXML
                 if delete_samplings:
                     dummy_map = {}
                     for i, (name, index) in enumerate(
                         zip(
-                            task_xml.findall(
-                                f"TaskSequence/Task/{fittype}/Model/*/Name"
-                            ),
-                            task_xml.findall(
-                                f"TaskSequence/Task/{fittype}/Model/*/IDIndex"
-                            ),
+                            task_xml.findall(f"TaskSequence/Task/{fittype}/Model/*/Name"),
+                            task_xml.findall(f"TaskSequence/Task/{fittype}/Model/*/IDIndex"),
                         )
                     ):
                         if (name.text, index.text) not in dummy_map:
@@ -743,18 +682,10 @@ def sigmond_multi_exp_fit(
                         param = sigmond.MCObsInfo(name.text, int(index.text))
                         mcobs_handler.eraseSamplings(param)
                     if fit_configs["sim_fit"]:
-                        task_xml.find(f"TaskSequence/Task/FinalEnergy/Name").text = (
-                            "dummy"
-                        )
-                        task_xml.find(f"TaskSequence/Task/FinalEnergy/IDIndex").text = (
-                            "0"
-                        )
-                        task_xml.find(f"TaskSequence/Task/FinalAmplitude/Name").text = (
-                            "dummy"
-                        )
-                        task_xml.find(
-                            f"TaskSequence/Task/FinalAmplitude/IDIndex"
-                        ).text = "1"
+                        task_xml.find(f"TaskSequence/Task/FinalEnergy/Name").text = "dummy"
+                        task_xml.find(f"TaskSequence/Task/FinalEnergy/IDIndex").text = "0"
+                        task_xml.find(f"TaskSequence/Task/FinalAmplitude/Name").text = "dummy"
+                        task_xml.find(f"TaskSequence/Task/FinalAmplitude/IDIndex").text = "1"
 
                 setuptaskhandler = sigmond.XMLHandler()
                 setuptaskhandler.set_from_string(task_input.to_str())
@@ -768,9 +699,7 @@ def sigmond_multi_exp_fit(
                     RTC.getModel().set_initial_parameters(initial_params)
 
                 try:
-                    best_fit_results = sigmond.doChiSquareFitting(
-                        RTC, this_minimizer_info, chisqr, qual, log_xml
-                    )
+                    best_fit_results = sigmond.doChiSquareFitting(RTC, this_minimizer_info, chisqr, qual, log_xml)
                     btmin = tmin
                     log_xml.seek_unique("ChiSquarePerDof")
                     bchisqr = float(log_xml.get_text_content())
@@ -779,10 +708,7 @@ def sigmond_multi_exp_fit(
 
                 new_fit_result = best_fit_results[this_fit_info.energy_index]
                 if old_fit_result is not None and not stability_region[level]:
-                    diff = abs(
-                        old_fit_result.getFullEstimate()
-                        - new_fit_result.getFullEstimate()
-                    )
+                    diff = abs(old_fit_result.getFullEstimate() - new_fit_result.getFullEstimate())
                     averr = max(
                         old_fit_result.getSymmetricError(),
                         new_fit_result.getSymmetricError(),
@@ -869,9 +795,7 @@ def sigmond_multi_exp_fit(
             tot_level = level
             break
 
-        if not betterchisqrdof(
-            best_chisqrdof[nlevels - 1], tot_best_chisqrdof[nlevels - 1]
-        ):
+        if not betterchisqrdof(best_chisqrdof[nlevels - 1], tot_best_chisqrdof[nlevels - 1]):
             tmax += 1
             break
         else:
@@ -893,14 +817,12 @@ def sigmond_multi_exp_fit(
     if tot_level >= 2:
         these_priors["SqrtGapToSecondEnergy"] = {
             "Mean": tot_best_estimates[level - 1][2].getFullEstimate(),
-            "Error": conflate_factor
-            * tot_best_estimates[level - 1][2].getSymmetricError(),
+            "Error": conflate_factor * tot_best_estimates[level - 1][2].getSymmetricError(),
         }
     if tot_level >= 3:
         these_priors["SqrtGapToThirdEnergy"] = {
             "Mean": tot_best_estimates[level - 1][4].getFullEstimate(),
-            "Error": conflate_factor
-            * tot_best_estimates[level - 1][4].getSymmetricError(),
+            "Error": conflate_factor * tot_best_estimates[level - 1][4].getSymmetricError(),
         }
     # print(tot_best_tmin[level],tmax)
     this_fit_info = fit_info.FitInfo(
@@ -921,9 +843,7 @@ def sigmond_multi_exp_fit(
     fittype = "TemporalCorrelatorFit"
 
     task_input.clearTasks()
-    task_input.doTemporalCorrelatorFit(
-        this_fit_info, **fit_options
-    )  # add input for ni level priors
+    task_input.doTemporalCorrelatorFit(this_fit_info, **fit_options)  # add input for ni level priors
 
     task_xml = task_input.sigmondXML
 
@@ -937,9 +857,7 @@ def sigmond_multi_exp_fit(
     log_xml = sigmond.XMLHandler("FitLogFile")
 
     try:
-        best_fit_results = sigmond.doChiSquareFitting(
-            RTC, this_minimizer_info, chisqr, qual, log_xml
-        )
+        best_fit_results = sigmond.doChiSquareFitting(RTC, this_minimizer_info, chisqr, qual, log_xml)
     except Exception as err:
         f = open(logfile, "w+")
         f.write(log_xml.output(1))
@@ -1028,9 +946,9 @@ def scipy_fit(
             fit_infos[scat_info[0].operator].priors = sh_priors[scat_info[0].obs_name]
             # SqrtGapToSecondEnergy==SqrtGapToSecondEnergy
             parameter_map[scat_info[0].operator] = [None] * scat_info[0].num_params
-            parameter_map[scat_info[0].operator][
-                scat_info[0].param_names.index("SqrtGapToSecondEnergy")
-            ] = this_fit_info.param_names.index("SqrtGapToSecondEnergy")
+            parameter_map[scat_info[0].operator][scat_info[0].param_names.index("SqrtGapToSecondEnergy")] = (
+                this_fit_info.param_names.index("SqrtGapToSecondEnergy")
+            )
             index = this_fit_info.num_params
             for i in range(scat_info[0].num_params):
                 if parameter_map[scat_info[0].operator][i] == None:
@@ -1040,20 +958,13 @@ def scipy_fit(
             i0 = 0
             i1 = 1
             shift1 = sh_priors[scat_info[i0].obs_name]["SqrtGapToSecondEnergy"]["Mean"]
-            shift2 = np.sqrt(
-                sh_priors[scat_info[i1].obs_name]["SqrtGapToSecondEnergy"]["Mean"] ** 2
-                - shift1 * shift1
-            )
+            shift2 = np.sqrt(sh_priors[scat_info[i1].obs_name]["SqrtGapToSecondEnergy"]["Mean"] ** 2 - shift1 * shift1)
             if np.isnan(shift2):
                 i0 = 1
                 i1 = 0
-                shift1 = sh_priors[scat_info[i0].obs_name]["SqrtGapToSecondEnergy"][
-                    "Mean"
-                ]
+                shift1 = sh_priors[scat_info[i0].obs_name]["SqrtGapToSecondEnergy"]["Mean"]
                 shift2 = np.sqrt(
-                    sh_priors[scat_info[i1].obs_name]["SqrtGapToSecondEnergy"]["Mean"]
-                    ** 2
-                    - shift1 * shift1
+                    sh_priors[scat_info[i1].obs_name]["SqrtGapToSecondEnergy"]["Mean"] ** 2 - shift1 * shift1
                 )
 
             fit_ops.append(scat_info[i0].operator)
@@ -1064,24 +975,16 @@ def scipy_fit(
             fit_ops.append(scat_info[i1].operator)
             fit_infos[scat_info[i1].operator] = scat_info[i1]
             fit_infos[scat_info[i1].operator].priors = sh_priors[scat_info[i1].obs_name]
-            fit_infos[scat_info[i1].operator].model = (
-                fit_info.FitModel.TimeForwardTwoExponentialForCons
-            )
-            fit_infos[scat_info[i1].operator].priors["SqrtGapToSecondEnergy"][
-                "Mean"
-            ] = shift2
-            fit_infos[scat_info[i1].operator].priors["SqrtGapToSecondEnergy"][
-                "Error"
-            ] = (0.8 * shift2)
-            models[scat_info[i1].operator] = fit_infos[
-                scat_info[i1].operator
-            ].model.sigmond_object(Nt)
+            fit_infos[scat_info[i1].operator].model = fit_info.FitModel.TimeForwardTwoExponentialForCons
+            fit_infos[scat_info[i1].operator].priors["SqrtGapToSecondEnergy"]["Mean"] = shift2
+            fit_infos[scat_info[i1].operator].priors["SqrtGapToSecondEnergy"]["Error"] = 0.8 * shift2
+            models[scat_info[i1].operator] = fit_infos[scat_info[i1].operator].model.sigmond_object(Nt)
 
             # SqrtGapToSecondEnergy==SqrtGapToSecondEnergy
             parameter_map[scat_info[i0].operator] = [None] * scat_info[i0].num_params
-            parameter_map[scat_info[i0].operator][
-                scat_info[i0].param_names.index("SqrtGapToSecondEnergy")
-            ] = this_fit_info.param_names.index("SqrtGapToSecondEnergy")
+            parameter_map[scat_info[i0].operator][scat_info[i0].param_names.index("SqrtGapToSecondEnergy")] = (
+                this_fit_info.param_names.index("SqrtGapToSecondEnergy")
+            )
             index = this_fit_info.num_params
             for i in range(scat_info[i0].num_params):
                 if parameter_map[scat_info[i0].operator][i] == None:
@@ -1091,12 +994,12 @@ def scipy_fit(
             # SqrtGapToSecondEnergy==SqrtGapToSecondEnergyShift
             # SqrtGapToThirdEnergy==SqrtGapToSecondEnergy
             parameter_map[scat_info[i1].operator] = [None] * scat_info[i1].num_params
-            parameter_map[scat_info[i1].operator][
-                scat_info[i1].param_names.index("SqrtGapToSecondEnergyShift")
-            ] = this_fit_info.param_names.index("SqrtGapToSecondEnergy")
-            parameter_map[scat_info[i1].operator][
-                scat_info[i1].param_names.index("SqrtGapToSecondEnergy")
-            ] = this_fit_info.param_names.index("SqrtGapToThirdEnergy")
+            parameter_map[scat_info[i1].operator][scat_info[i1].param_names.index("SqrtGapToSecondEnergyShift")] = (
+                this_fit_info.param_names.index("SqrtGapToSecondEnergy")
+            )
+            parameter_map[scat_info[i1].operator][scat_info[i1].param_names.index("SqrtGapToSecondEnergy")] = (
+                this_fit_info.param_names.index("SqrtGapToThirdEnergy")
+            )
             for i in range(scat_info[i1].num_params):
                 if parameter_map[scat_info[i1].operator][i] == None:
                     parameter_map[scat_info[i1].operator][i] = index
@@ -1108,15 +1011,9 @@ def scipy_fit(
                 mcobs_handler.eraseSamplings(sigmond.MCObsInfo("dummy", i))
 
     attempts = []
-    if (
-        fit_configs["tmin_try_min"]
-        and fit_configs["tmin_try_max"]
-        and not delete_samplings
-    ):
+    if fit_configs["tmin_try_min"] and fit_configs["tmin_try_max"] and not delete_samplings:
         attempts += list(range(fit_configs["tmin"], fit_configs["tmin_try_max"] + 1))
-        attempts += list(
-            range(fit_configs["tmin"] - 1, fit_configs["tmin_try_min"] - 1, -1)
-        )
+        attempts += list(range(fit_configs["tmin"] - 1, fit_configs["tmin_try_min"] - 1, -1))
 
     if attempts:
         for attempt in attempts:
@@ -1160,20 +1057,14 @@ def scipy_fit(
 
     bestfit_params = []
     for ip in range(this_fit_info.num_params):
-        bestfit_params.append(
-            mcobs_handler.getEstimate(this_fit_info.fit_param_obs(ip))
-        )
+        bestfit_params.append(mcobs_handler.getEstimate(this_fit_info.fit_param_obs(ip)))
 
     if this_fit_info.sim_fit:
         fit_infos[scat_info[0].operator].priors = {}
-        fit_infos[scat_info[0].operator].model = (
-            fit_info.FitModel.TimeForwardTwoExponential
-        )
+        fit_infos[scat_info[0].operator].model = fit_info.FitModel.TimeForwardTwoExponential
         if this_fit_info.model == fit_info.FitModel.TwoExpConspiracy:
             fit_infos[scat_info[1].operator].priors = {}
-            fit_infos[scat_info[1].operator].model = (
-                fit_info.FitModel.TimeForwardTwoExponential
-            )
+            fit_infos[scat_info[1].operator].model = fit_info.FitModel.TimeForwardTwoExponential
 
     return this_fit_info, bestfit_params, chisqr, pval, dof
 
@@ -1197,14 +1088,10 @@ def complete_one_fit(
     central_fit = fit_op[0]
     sh_fits = fit_op[1:]
     if delete_samplings:
-        param_obs_keys = [
-            sigmond.MCObsInfo("dummy", ip)
-            for ip in range(this_fit_info[central_fit].num_params)
-        ]
+        param_obs_keys = [sigmond.MCObsInfo("dummy", ip) for ip in range(this_fit_info[central_fit].num_params)]
     else:
         param_obs_keys = [
-            this_fit_info[central_fit].fit_param_obs(ip)
-            for ip in range(this_fit_info[central_fit].num_params)
+            this_fit_info[central_fit].fit_param_obs(ip) for ip in range(this_fit_info[central_fit].num_params)
         ]
     for sh_fit in sh_fits:
         if delete_samplings:
@@ -1212,34 +1099,22 @@ def complete_one_fit(
                 if sigmond.MCObsInfo("dummy", index) not in param_obs_keys:
                     param_obs_keys.append(sigmond.MCObsInfo("dummy", index))
         else:
-            new_obs_name = (
-                this_fit_info[sh_fit].obs_name
-                + "-"
-                + this_fit_info[central_fit].obs_name
-            )
+            new_obs_name = this_fit_info[sh_fit].obs_name + "-" + this_fit_info[central_fit].obs_name
             for ip, index in enumerate(parameter_map[sh_fit]):
                 if index == len(param_obs_keys):
-                    param_obs_keys.append(
-                        sigmond.MCObsInfo(
-                            new_obs_name, this_fit_info[sh_fit].obs_id(ip)
-                        )
-                    )
+                    param_obs_keys.append(sigmond.MCObsInfo(new_obs_name, this_fit_info[sh_fit].obs_id(ip)))
                 elif index > len(param_obs_keys):
                     logging.error("Ive made a mistake")
 
     priors = {}
     for prior in this_fit_info[central_fit].priors:
         if prior in this_fit_info[central_fit].param_names:
-            priors[this_fit_info[central_fit].param_names.index(prior)] = this_fit_info[
-                central_fit
-            ].priors[prior]
+            priors[this_fit_info[central_fit].param_names.index(prior)] = this_fit_info[central_fit].priors[prior]
 
     for sh_fit in sh_fits:
         for prior in this_fit_info[sh_fit].priors:
             if prior in this_fit_info[sh_fit].param_names:
-                new_prior_index = parameter_map[sh_fit][
-                    this_fit_info[sh_fit].param_names.index(prior)
-                ]
+                new_prior_index = parameter_map[sh_fit][this_fit_info[sh_fit].param_names.index(prior)]
                 print(sh_fit, prior, new_prior_index)
                 if new_prior_index in priors:
                     logging.error("this is bad")
@@ -1260,9 +1135,7 @@ def complete_one_fit(
         old_op = None
         for i, (op, t) in enumerate(matrix_rows):
             if op != old_op:
-                corr = sigmond.CorrelatorAtTimeInfo(
-                    op.operator_info, op.operator_info, t, herm, subvev
-                )
+                corr = sigmond.CorrelatorAtTimeInfo(op.operator_info, op.operator_info, t, herm, subvev)
                 old_op = op
             corr.resetTimeSeparation(t)
             obs = sigmond.MCObsInfo(corr, sigmond.ComplexArg.RealPart)
@@ -1270,17 +1143,13 @@ def complete_one_fit(
             old_op2 = None
             for j, (op2, t2) in enumerate(matrix_rows[: i + 1]):
                 if op2 != old_op2:
-                    corr2 = sigmond.CorrelatorAtTimeInfo(
-                        op2.operator_info, op2.operator_info, t2, herm, subvev
-                    )
+                    corr2 = sigmond.CorrelatorAtTimeInfo(op2.operator_info, op2.operator_info, t2, herm, subvev)
                     old_op2 = op2
                 corr2.resetTimeSeparation(t2)
                 obs2 = sigmond.MCObsInfo(corr2, sigmond.ComplexArg.RealPart)
                 # if op==op2:
                 all_covmatrices[isamp, i, j] = mcobs_handler.getCovariance(obs, obs2)
-                all_covmatrices[isamp, j, i] = np.conj(
-                    mcobs_handler.getCovariance(obs, obs2)
-                )
+                all_covmatrices[isamp, j, i] = np.conj(mcobs_handler.getCovariance(obs, obs2))
 
         mcobs_handler.setSamplingNext()
         isamp += 1
@@ -1320,9 +1189,7 @@ def complete_one_fit(
         sample_priors = {}
         sample_priors.update(priors)
         for ip in priors:
-            sample_priors[ip]["Mean"] = np.random.normal(
-                priors[ip]["Mean"], 2.0 * priors[ip]["Error"]
-            )
+            sample_priors[ip]["Mean"] = np.random.normal(priors[ip]["Mean"], 2.0 * priors[ip]["Error"])
 
         if threads[ithread] != None:
             threads[ithread].join()
@@ -1410,13 +1277,9 @@ def minimize_sample(
             if i == 0:
                 this_op_datapoints = datapoints[: len(tvals[op])]
             else:
-                this_op_datapoints = datapoints[
-                    len(tvals[fitop[i - 1]]) : len(tvals[fitop[i - 1]]) + len(tvals[op])
-                ]
+                this_op_datapoints = datapoints[len(tvals[fitop[i - 1]]) : len(tvals[fitop[i - 1]]) + len(tvals[op])]
 
-            initial_params_set = model[op].guessInitialParamValuesPy(
-                this_op_datapoints, tvals[op]
-            )
+            initial_params_set = model[op].guessInitialParamValuesPy(this_op_datapoints, tvals[op])
             for i, ip in enumerate(parameter_map[op]):
                 if initial_params[ip] != None:
                     initial_params[ip] += initial_params_set[i]
@@ -1484,9 +1347,7 @@ def minimize_sample(
 
 
 # the function minimized in scipy fit
-def minimize_corr_function(
-    parameters, cov_matrix, model, trange, datapoints, fitop, parameter_map, priors={}
-):
+def minimize_corr_function(parameters, cov_matrix, model, trange, datapoints, fitop, parameter_map, priors={}):
     # get model points from parameters and model
     modelpoints = []
     divied_parameters = {}
@@ -1509,9 +1370,7 @@ def minimize_corr_function(
         )
 
     # print(parameters, prior_sum, correlated_chisquare(datapoints, cov_matrix, np.array(modelpoints), prior_sum))
-    return correlated_chisquare(
-        datapoints, cov_matrix, np.array(modelpoints), prior_sum
-    )
+    return correlated_chisquare(datapoints, cov_matrix, np.array(modelpoints), prior_sum)
 
 
 # the correlated chi-square of a model and datapoint set
@@ -1530,10 +1389,7 @@ def correlated_chisquare(data, cov_matrix, modelpoints, prior_sum):
 # from a file, pivot_file, retrieve the pivot type of that file.
 def get_pivot_type(pivot_file):
     ftype = sigmond.getFileID(pivot_file)
-    if (
-        ftype == sigmond.FileType.SinglePivot_CN
-        or ftype == sigmond.FileType.SinglePivot_RN
-    ):
+    if ftype == sigmond.FileType.SinglePivot_CN or ftype == sigmond.FileType.SinglePivot_RN:
         pivot_type = "single_pivot"
     elif ftype == sigmond.FileType.RollingPivot:
         pivot_type = "rolling_pivot"
@@ -1641,17 +1497,13 @@ def write_channel_plots(operators, plh, create_pickles, create_pdfs, pdh, data=N
                 else:
                     df = pd.read_csv(pdh.corr_estimates_file(corr_name))
             except pd.errors.EmptyDataError as err:
-                logging.warning(
-                    f"pandas.errors.EmptyDataError: {err} for correlator {corr_name}."
-                )
+                logging.warning(f"pandas.errors.EmptyDataError: {err} for correlator {corr_name}.")
 
             plh.clf()
             try:
                 plh.correlator_plot(df, 0)  # , op1, op2) #0 for regular corr plot
             except KeyError as err:
-                logging.warning(
-                    f"No correlator estimates could be optained for {corr_name}."
-                )
+                logging.warning(f"No correlator estimates could be optained for {corr_name}.")
                 continue
 
             if create_pickles:
@@ -1715,23 +1567,13 @@ def get_possible_spectrum_ni_energies(
             ni_total_energy_lab_err = 0
             for hadron in level:
                 sh_op = get_sh_operator_func(hadron)
-                ni_total_energy_elab += single_hadron_energy_dict[sh_op.channel][sh_op][
-                    "elab"
-                ].getFullEstimate()
+                ni_total_energy_elab += single_hadron_energy_dict[sh_op.channel][sh_op]["elab"].getFullEstimate()
                 ni_total_energy_lab_err += (
-                    single_hadron_energy_dict[sh_op.channel][sh_op][
-                        "elab"
-                    ].getSymmetricError()
-                    ** 2
+                    single_hadron_energy_dict[sh_op.channel][sh_op]["elab"].getSymmetricError() ** 2
                 )
-            ni_total_energy_ecm = np.sqrt(
-                ni_total_energy_elab**2
-                - 4 * np.pi**2 / lattice_extent**2 * channel_obj.psq
-            )
+            ni_total_energy_ecm = np.sqrt(ni_total_energy_elab**2 - 4 * np.pi**2 / lattice_extent**2 * channel_obj.psq)
             ni_total_energy_lab_err = np.sqrt(ni_total_energy_lab_err)
-            ni_total_energy_ecm_err = (
-                ni_total_energy_lab_err / (ni_total_energy_ecm) * ni_total_energy_elab
-            )
+            ni_total_energy_ecm_err = ni_total_energy_lab_err / (ni_total_energy_ecm) * ni_total_energy_elab
             energy_levels_ecm.append([ni_total_energy_ecm, ni_total_energy_ecm_err])
             energy_levels_ecm_ref.append(
                 [
@@ -1836,9 +1678,7 @@ def optimal_per_operator_normalized_assignment(
     # ------------------------------------------------------------------
 
     valid_op_indices = [
-        idx
-        for idx, hlist in enumerate(op_hadrons)
-        if all(h in available_single_hadrons for h in hlist)
+        idx for idx, hlist in enumerate(op_hadrons) if all(h in available_single_hadrons for h in hlist)
     ]
 
     # If filtering removed everything (unlikely), fall back to all operators
@@ -1873,9 +1713,7 @@ def optimal_per_operator_normalized_assignment(
     row_ind, col_ind = linear_sum_assignment(padded)
 
     # Map level -> chosen reduced operator index
-    level_to_red_op = {
-        r: c for r, c in zip(row_ind, col_ind) if r < n_levels and c < n_cols
-    }
+    level_to_red_op = {r: c for r, c in zip(row_ind, col_ind) if r < n_levels and c < n_cols}
 
     # ------------------------------------------------------------------
     # Step 5: Build assignments, adding simple sole-single-hadron rule
@@ -1933,9 +1771,7 @@ def construct_Z_matrix(zmags_in_channel):
             if z_value is not None:
                 z_matrix[level_idx, op_idx] = z_value.getFullEstimate()
             else:
-                z_matrix[level_idx, op_idx] = (
-                    0.0  # Or handle missing data appropriately
-                )
+                z_matrix[level_idx, op_idx] = 0.0  # Or handle missing data appropriately
     return z_matrix
 
 
@@ -1957,9 +1793,7 @@ def calculate_certainty_metrics(normalized_z, assignments, z_ops):
         if op_ids:
             normalized_value = normalized_z[level_idx, op_ids].max()
             alternative_costs = np.delete(normalized_z[level_idx, :], op_ids)
-            next_best_value = (
-                np.max(alternative_costs) if alternative_costs.size else 0.0
-            )
+            next_best_value = np.max(alternative_costs) if alternative_costs.size else 0.0
         else:
             # Assigned NI not represented among operator columns
             normalized_value = 0.0

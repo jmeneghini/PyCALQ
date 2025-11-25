@@ -84,12 +84,8 @@ alphabetical = {
     "B2": 0.022,
     "E": 0.05,
 }
-alphabetical_addp = {
-    irrep + "p": value + 0.0000016 for irrep, value in alphabetical.items()
-}
-alphabetical_addm = {
-    irrep + "m": value + 0.0000013 for irrep, value in alphabetical.items()
-}
+alphabetical_addp = {irrep + "p": value + 0.0000016 for irrep, value in alphabetical.items()}
+alphabetical_addm = {irrep + "m": value + 0.0000013 for irrep, value in alphabetical.items()}
 alphabetical.update(alphabetical_addp)
 alphabetical.update(alphabetical_addm)
 
@@ -120,12 +116,8 @@ latex_format = {
     "B2": r"$B_2$",
     "E": r"$E$",
 }
-latex_format_addp = {
-    irrep + "p": format[:-1] + "^{+}$" for irrep, format in latex_format.items()
-}
-latex_format_addm = {
-    irrep + "m": format[:-1] + "^{-}$" for irrep, format in latex_format.items()
-}
+latex_format_addp = {irrep + "p": format[:-1] + "^{+}$" for irrep, format in latex_format.items()}
+latex_format_addm = {irrep + "m": format[:-1] + "^{-}$" for irrep, format in latex_format.items()}
 latex_format.update(latex_format_addp)
 latex_format.update(latex_format_addm)
 latex_format.update(
@@ -160,9 +152,7 @@ xmgrace_format = {"N": "N", "pi": "\\xp"}
 
 # settings for xmgrace plots
 # legend_setting = "0.25, 0.92" #string of x,y location where legend should be located on graph
-legend_setting = (
-    "0.7, 0.92"  # string of x,y location where legend should be located on graph
-)
+legend_setting = "0.7, 0.92"  # string of x,y location where legend should be located on graph
 standard_graph_width = 11.64  # graphs produced by sigmond scripts have these widths
 standard_y_min = 2.33  # graphs produced by sigmond typically have this size of gap below them for axis labels and such
 standard_graph_height = 12.42  # graphs produced by sigmond scripts have these heights

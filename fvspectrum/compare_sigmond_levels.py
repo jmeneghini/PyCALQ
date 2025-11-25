@@ -119,9 +119,7 @@ class CompareLevels:
                         if plot_configs["pivot_type"]:
                             rotate_type = "RP"
                     sampling_mode = plot_configs["sampling_mode"]  # +"-samplings"
-                    key = proj_files_handler.all_tasks[
-                        tm.Task.fit_spectrum.name
-                    ].filekey(
+                    key = proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].filekey(
                         None,
                         rebin,
                         sampling_mode + "-samplings",
@@ -131,15 +129,11 @@ class CompareLevels:
                         tD,
                         file_tag,
                     )
-                    file = self.proj_files_handler.all_tasks[
-                        tm.Task.fit_spectrum.name
-                    ].estimates_file(key)
+                    file = self.proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].estimates_file(key)
                     if os.path.isfile(file):
                         plot[dataset_key] = file
                     else:
-                        file2 = self.proj_files_handler.all_tasks[
-                            tm.Task.fit_spectrum.name
-                        ].samplings_file(
+                        file2 = self.proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].samplings_file(
                             False,
                             None,
                             None,
@@ -154,9 +148,7 @@ class CompareLevels:
                         if os.path.isfile(file2):
                             plot[dataset_key] = file2
                         else:
-                            logging.warning(
-                                f"Could not find either '{file}' or '{file2}' for Nbin={rebin}."
-                            )
+                            logging.warning(f"Could not find either '{file}' or '{file2}' for Nbin={rebin}.")
 
             # compare different pivots
             elif root == "compare_gevp":
@@ -174,9 +166,7 @@ class CompareLevels:
                         file_tag = "-" + plot_configs["run_tag"]
                     sampling_mode = plot_configs["sampling_mode"]  # +"-samplings"
                     rebin = plot_configs["rebin"]
-                    key = proj_files_handler.all_tasks[
-                        tm.Task.fit_spectrum.name
-                    ].filekey(
+                    key = proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].filekey(
                         None,
                         rebin,
                         sampling_mode + "-samplings",
@@ -186,15 +176,11 @@ class CompareLevels:
                         tD,
                         file_tag,
                     )
-                    file = self.proj_files_handler.all_tasks[
-                        tm.Task.fit_spectrum.name
-                    ].estimates_file(key)
+                    file = self.proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].estimates_file(key)
                     if os.path.isfile(file):
                         plot[dataset_key] = file
                     else:
-                        file2 = self.proj_files_handler.all_tasks[
-                            tm.Task.fit_spectrum.name
-                        ].samplings_file(
+                        file2 = self.proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].samplings_file(
                             False,
                             None,
                             None,
@@ -209,9 +195,7 @@ class CompareLevels:
                         if os.path.isfile(file2):
                             plot[dataset_key] = file2
                         else:
-                            logging.warning(
-                                f"Could not find either '{file}' or '{file2}' for pivot_set={dataset_key}."
-                            )
+                            logging.warning(f"Could not find either '{file}' or '{file2}' for pivot_set={dataset_key}.")
 
             # compare spectrums with different user defined tags. For those unexpected comparison, user-defined
             # filetags are allowed in the spectrum task and then different tags can be compared here
@@ -228,9 +212,7 @@ class CompareLevels:
                     sampling_mode = plot_configs["sampling_mode"]
                     # sampling_mode = sampling_mode+"-samplings"
                     rebin = plot_configs["rebin"]
-                    key = proj_files_handler.all_tasks[
-                        tm.Task.fit_spectrum.name
-                    ].filekey(
+                    key = proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].filekey(
                         None,
                         rebin,
                         sampling_mode + "-samplings",
@@ -240,15 +222,11 @@ class CompareLevels:
                         tD,
                         "-" + file_tag,
                     )
-                    file = self.proj_files_handler.all_tasks[
-                        tm.Task.fit_spectrum.name
-                    ].estimates_file(key)
+                    file = self.proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].estimates_file(key)
                     if os.path.isfile(file):
                         plot[dataset_key] = file
                     else:
-                        file2 = self.proj_files_handler.all_tasks[
-                            tm.Task.fit_spectrum.name
-                        ].samplings_file(
+                        file2 = self.proj_files_handler.all_tasks[tm.Task.fit_spectrum.name].samplings_file(
                             False,
                             None,
                             None,
@@ -263,9 +241,7 @@ class CompareLevels:
                         if os.path.isfile(file2):
                             plot[dataset_key] = file2
                         else:
-                            logging.warning(
-                                f"Could not find either '{file}' or '{file2}' for run_tag={file_tag}."
-                            )
+                            logging.warning(f"Could not find either '{file}' or '{file2}' for run_tag={file_tag}.")
 
             if plot:
                 self.compare_plots.append(plot)
@@ -273,9 +249,7 @@ class CompareLevels:
                 logging.warning(f"Could not generate {root} plot.")
 
         # make yaml output
-        run_tag = self.other_params.get("run_tag", "") or task_configs.get(
-            "run_tag", ""
-        )
+        run_tag = self.other_params.get("run_tag", "") or task_configs.get("run_tag", "")
         full_input_filepath = proj_files_handler.full_input_file(run_tag)
         logging.info(f"Full input written to '{full_input_filepath}'.")
         with open(full_input_filepath, "w+") as log_file:
@@ -316,17 +290,10 @@ class CompareLevels:
                 study_particle = False
                 error_analysis = {}
                 if self.other_params["reference_particle"]:
-                    if (
-                        particle[0]
-                        == general.particles.data[
-                            self.other_params["reference_particle"]
-                        ]["isospin"]
-                    ):
+                    if particle[0] == general.particles.data[self.other_params["reference_particle"]]["isospin"]:
                         if (
                             particle[1]
-                            == general.particles.data[
-                                self.other_params["reference_particle"]
-                            ]["strangeness"]
+                            == general.particles.data[self.other_params["reference_particle"]]["strangeness"]
                         ):
                             study_particle = True
                             error_analysis["x"] = []
@@ -351,10 +318,7 @@ class CompareLevels:
                     irreps = []
                     df = datasets[plot[dataset]]
 
-                    for i, row in df[
-                        (df["isospin"] == particle[0])
-                        & (df["strangeness"] == particle[1])
-                    ].iterrows():
+                    for i, row in df[(df["isospin"] == particle[0]) & (df["strangeness"] == particle[1])].iterrows():
                         irrep = (row["irrep"], row["momentum"])
                         if irrep not in irreps:
                             irreps.append(irrep)
@@ -367,10 +331,7 @@ class CompareLevels:
                     irreps.sort(key=lambda x: x[1] + psettings.alphabetical[x[0]])
 
                     # collect spectrum and error analysis data
-                    for i, row in df[
-                        (df["isospin"] == particle[0])
-                        & (df["strangeness"] == particle[1])
-                    ].iterrows():
+                    for i, row in df[(df["isospin"] == particle[0]) & (df["strangeness"] == particle[1])].iterrows():
                         if (
                             not np.isnan(row[f"{this_energy_key} value"])
                             and row[levels_key] <= self.other_params["max_level"]
@@ -380,18 +341,10 @@ class CompareLevels:
                             levels.append(row[f"{this_energy_key} value"])
                             errs.append(row[f"{this_energy_key} error"])
                             nothing = False
-                            if (
-                                study_particle
-                                and row["momentum"] == 0
-                                and row[levels_key] == 0
-                            ):
+                            if study_particle and row["momentum"] == 0 and row[levels_key] == 0:
                                 error_analysis["x"].append(dataset)
-                                error_analysis["val"].append(
-                                    row[f"{this_energy_key} value"]
-                                )
-                                error_analysis["err"].append(
-                                    row[f"{this_energy_key} error"]
-                                )
+                                error_analysis["val"].append(row[f"{this_energy_key} value"])
+                                error_analysis["err"].append(row[f"{this_energy_key} error"])
                                 error_analysis["chisqrdof"].append(row["chisqrdof"])
 
                     # plot spectrum dataset
@@ -427,25 +380,17 @@ class CompareLevels:
                     if particle[1] < 0:
                         strangeness = -particle[1]
                         strangeness = f"m{particle[1]}"
-                    filekey = (
-                        f"{self.compare_plots.index(plot)}-{particle[0]}_S{strangeness}"
-                    )
-                    plh.save_pdf(
-                        self.proj_files_handler.summary_plot_file("pdf", filekey)
-                    )
+                    filekey = f"{self.compare_plots.index(plot)}-{particle[0]}_S{strangeness}"
+                    plh.save_pdf(self.proj_files_handler.summary_plot_file("pdf", filekey))
                     logging.info(
                         f"Comparison plot saved to '{self.proj_files_handler.summary_plot_file('pdf',filekey)}'."
                     )
-                    plh.add_single_plot(
-                        self.proj_files_handler.summary_plot_file("pdf", filekey)
-                    )
+                    plh.add_single_plot(self.proj_files_handler.summary_plot_file("pdf", filekey))
 
                 # generate error analysis plot
                 if study_particle and error_analysis["x"]:
                     plh.clf()
-                    relerrs = np.array(error_analysis["err"]) / np.array(
-                        error_analysis["val"]
-                    )
+                    relerrs = np.array(error_analysis["err"]) / np.array(error_analysis["val"])
                     relerrs /= relerrs[0]
                     plh.show_trend(error_analysis["x"], relerrs, "$R_N/R_1$")
                     plh.show_trend(
@@ -481,8 +426,7 @@ class CompareLevels:
                         if "dElab value" not in df:
                             continue
                         for i, row in df[
-                            (df["isospin"] == particle[0])
-                            & (df["strangeness"] == particle[1])
+                            (df["isospin"] == particle[0]) & (df["strangeness"] == particle[1])
                         ].iterrows():
                             if row["momentum"] not in irreps:
                                 irreps[row["momentum"]] = []
@@ -493,14 +437,13 @@ class CompareLevels:
                             # print(dataset,row['momentum'],irreps[row['momentum']],row['irrep'],row[levels_key])
                             if row["irrep"] not in irreps[row["momentum"]]:
                                 irreps[row["momentum"]].append(row["irrep"])
-                            elif irreps[row["momentum"]].index(row["irrep"]) + row[
-                                levels_key
-                            ] >= len(irreps[row["momentum"]]):
+                            elif irreps[row["momentum"]].index(row["irrep"]) + row[levels_key] >= len(
+                                irreps[row["momentum"]]
+                            ):
                                 irreps[row["momentum"]].append(row["irrep"])
                             elif (
                                 irreps[row["momentum"]][
-                                    irreps[row["momentum"]].index(row["irrep"])
-                                    + int(row[levels_key])
+                                    irreps[row["momentum"]].index(row["irrep"]) + int(row[levels_key])
                                 ]
                                 != row["irrep"]
                             ):
@@ -510,10 +453,7 @@ class CompareLevels:
                                 )
 
                         # sort irreps
-                        [
-                            irreps[irrep].sort(key=lambda x: psettings.alphabetical[x])
-                            for irrep in irreps
-                        ]
+                        [irreps[irrep].sort(key=lambda x: psettings.alphabetical[x]) for irrep in irreps]
 
                     # each momentum is on a different plot
                     for mom in irreps:
@@ -537,8 +477,7 @@ class CompareLevels:
                             ].iterrows():
                                 if (
                                     not np.isnan(row[f"dElab value"])
-                                    and row[levels_key]
-                                    <= self.other_params["max_level"]
+                                    and row[levels_key] <= self.other_params["max_level"]
                                 ):
                                     irrep = row["irrep"]
                                     fit_level = row[levels_key]
@@ -566,21 +505,11 @@ class CompareLevels:
                                 strangeness = -particle[1]
                                 strangeness = f"m{particle[1]}"
                             filekey = f"{self.compare_plots.index(plot)}-{particle[0]}_S{strangeness}_PSQ{mom}"
-                            plh.save_pdf(
-                                self.proj_files_handler.summary_plot_file(
-                                    "pdf", filekey
-                                )
-                            )
+                            plh.save_pdf(self.proj_files_handler.summary_plot_file("pdf", filekey))
                             logging.info(
                                 f"Comparison plot saved to '{self.proj_files_handler.summary_plot_file('pdf',filekey)}'."
                             )
-                            plh.add_single_plot(
-                                self.proj_files_handler.summary_plot_file(
-                                    "pdf", filekey
-                                )
-                            )
+                            plh.add_single_plot(self.proj_files_handler.summary_plot_file("pdf", filekey))
 
         plh.compile_pdf(self.proj_files_handler.summary_file())
-        logging.info(
-            f"Summary file saved to {self.proj_files_handler.summary_file()}.pdf"
-        )
+        logging.info(f"Summary file saved to {self.proj_files_handler.summary_file()}.pdf")

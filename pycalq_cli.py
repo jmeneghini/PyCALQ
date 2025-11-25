@@ -26,9 +26,7 @@ ISO_MAP = {
 
 def _add_estimates_arguments(parser):
     parser.add_argument("csv_file", help="Input CSV file with estimates")
-    parser.add_argument(
-        "-o", "--output", help="Output YAML file (default: print to stdout)"
-    )
+    parser.add_argument("-o", "--output", help="Output YAML file (default: print to stdout)")
 
 
 def row_key(r):
@@ -124,9 +122,7 @@ def setup_parser():
 
     # Traditional separate files
     main_parser.add_argument("-g", "--general", help="general configuration file")
-    main_parser.add_argument(
-        "-t", "--tasks", nargs="+", help="task(s) configuration file(s)"
-    )
+    main_parser.add_argument("-t", "--tasks", nargs="+", help="task(s) configuration file(s)")
 
     # Estimates to fit config converter
     convert_parser = subparsers.add_parser(
@@ -168,16 +164,12 @@ def main():
             # Validate arguments - either -f OR both -g and -t must be provided
             if full_input:
                 if general_arg or tasks_arg:
-                    parser.error(
-                        "Cannot use -f/--full-input together with -g/--general or -t/--tasks"
-                    )
+                    parser.error("Cannot use -f/--full-input together with -g/--general or -t/--tasks")
                 gen_configs, task_configs = parse_full_input_file(full_input)
             else:
                 # Using separate files - both must be provided
                 if not general_arg or not tasks_arg:
-                    parser.error(
-                        "Must provide either -f/--full-input OR both -g/--general and -t/--tasks"
-                    )
+                    parser.error("Must provide either -f/--full-input OR both -g/--general and -t/--tasks")
                 gen_configs, task_configs = general_arg, tasks_arg
 
             set_multiprocessing_start_method()  # Ensure 'fork' start method for multiprocessing before importing pycalq

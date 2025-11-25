@@ -35,9 +35,7 @@ def shift_levels(indexes, vals, errors, shifted_array=np.array([]), index=0):
 
         these_indexes = indexes[index:]
         this_remaining_irrep_index = these_indexes[0]
-        this_remaining_irrep_indexes = (
-            np.where(these_indexes == this_remaining_irrep_index)[0] + index
-        )
+        this_remaining_irrep_indexes = np.where(these_indexes == this_remaining_irrep_index)[0] + index
 
         if len(this_remaining_irrep_indexes) == 1:
             return shift_levels(indexes, vals, errors, shifted_array, index=index + 1)
@@ -52,13 +50,9 @@ def shift_levels(indexes, vals, errors, shifted_array=np.array([]), index=0):
                 compare_lower = vals[i] - errors[i]
                 if shifted_array[i] != 0.0:
                     continue
-                if (
-                    compare_lower <= this_val_lower and compare_upper >= this_val_upper
-                ):  # set new bounds on this_value
+                if compare_lower <= this_val_lower and compare_upper >= this_val_upper:  # set new bounds on this_value
                     overlap = True
-                elif (
-                    compare_lower >= this_val_lower and compare_upper <= this_val_upper
-                ):
+                elif compare_lower >= this_val_lower and compare_upper <= this_val_upper:
                     overlap = True
                 elif (
                     compare_lower <= this_val_upper
@@ -86,9 +80,7 @@ def shift_levels(indexes, vals, errors, shifted_array=np.array([]), index=0):
 
             new_index = np.where(shifted_array[index + 1 :] == 0.0)[0]
             if new_index.any():
-                return shift_levels(
-                    indexes, vals, errors, shifted_array, index=new_index[0] + index + 1
-                )
+                return shift_levels(indexes, vals, errors, shifted_array, index=new_index[0] + index + 1)
             else:
                 return shifted_array
 
@@ -109,9 +101,7 @@ class PlottingHandler:
         plt.tight_layout()
 
     except RuntimeError as err:
-        print(
-            "Not all libraries are available for matplotlib latex plots. Latex will not be used for plots."
-        )
+        print("Not all libraries are available for matplotlib latex plots. Latex will not be used for plots.")
         print(f"\t message: {err}")
         latex = False
         matplotlib.rcParams["text.usetex"] = False
@@ -165,9 +155,7 @@ class PlottingHandler:
             shadow=None,
         )
 
-    def correlator_plot(
-        self, df, ptype=0, op1=None, op2=None, color_index=0, label=None
-    ):
+    def correlator_plot(self, df, ptype=0, op1=None, op2=None, color_index=0, label=None):
         """Generate a correlator plot using Matplotlib."""
         plt.errorbar(
             x=df["aTime"],
@@ -181,14 +169,10 @@ class PlottingHandler:
             label=label,
         )
         if ptype == 0:
-            plt.ylabel(
-                r"$C(t)$"
-            )  # not all dollar signs require a latex compiler, for example this is okay.
+            plt.ylabel(r"$C(t)$")  # not all dollar signs require a latex compiler, for example this is okay.
         else:
             if self.latex:
-                plt.ylabel(
-                    r"$a_tE_{\textup{lab}}$"
-                )  # but the use of "\textup{}" command requires a latex compiler
+                plt.ylabel(r"$a_tE_{\textup{lab}}$")  # but the use of "\textup{}" command requires a latex compiler
             else:
                 plt.ylabel(r"$a_tE_{lab}$")
 
@@ -197,9 +181,7 @@ class PlottingHandler:
         # Annotate the plot with additional information if provided
         labels = []
         if op1:
-            labels.append(
-                f"snk: {str(op1)}"
-            )  # double check that I'm not messing up sink and source
+            labels.append(f"snk: {str(op1)}")  # double check that I'm not messing up sink and source
         if op2:
             labels.append(f"src: {str(op2)}")
         if labels:
@@ -294,54 +276,33 @@ class PlottingHandler:
                     model = fit_result_info["info"].model.sigmond_object(Nt)
                     # if sim fit, grab the fit params that correspont to the correlator being plotted
                     # corrlator is indicated by sh_index => 0 - interacting correlator, 1,2 - single hadron correlators
-                    if fit_result_info[
-                        "info"
-                    ].sim_fit:  # make distinct between Deg/2-3exponential
+                    if fit_result_info["info"].sim_fit:  # make distinct between Deg/2-3exponential
                         if sh_index == 0:
                             min_index = 0
                             max_index = fit_result_info["info"].num_params
                             params = [
                                 estimate.getFullEstimate()
-                                for estimate in fit_result_info["estimates"][
-                                    min_index:max_index
-                                ]
+                                for estimate in fit_result_info["estimates"][min_index:max_index]
                             ]
                         if sh_index == 1:
-                            model = fit_info.FitModel.TimeForwardTwoExponential.sigmond_object(
-                                Nt
-                            )
+                            model = fit_info.FitModel.TimeForwardTwoExponential.sigmond_object(Nt)
                             min_index = fit_result_info["info"].num_params
                             indexes = [min_index, min_index + 1, 2, min_index + 2]
-                            params = [
-                                fit_result_info["estimates"][i].getFullEstimate()
-                                for i in indexes
-                            ]
+                            params = [fit_result_info["estimates"][i].getFullEstimate() for i in indexes]
                         if sh_index == 2:
-                            model = fit_info.FitModel.TimeForwardTwoExponentialForCons.sigmond_object(
-                                Nt
-                            )
+                            model = fit_info.FitModel.TimeForwardTwoExponentialForCons.sigmond_object(Nt)
                             min_index = fit_result_info["info"].num_params + 3
                             indexes = [min_index, min_index + 1, 2, 3, min_index + 2]
-                            params = [
-                                fit_result_info["estimates"][i].getFullEstimate()
-                                for i in indexes
-                            ]
+                            params = [fit_result_info["estimates"][i].getFullEstimate() for i in indexes]
                         energy_index = min_index  # correspond to fit model
                     else:  # just plot fit line
                         params = []
                         for estimate in fit_result_info["estimates"]:
                             params.append(estimate.getFullEstimate())
-                    y = [
-                        -np.log(model.eval(params, x[i + 1]) / model.eval(params, x[i]))
-                        for i in range(len(x) - 1)
-                    ]
+                    y = [-np.log(model.eval(params, x[i + 1]) / model.eval(params, x[i])) for i in range(len(x) - 1)]
                     plt.plot(x[:-1] + 0.5, y, color="black", ls="--")
-                energy_result = fit_result_info["estimates"][
-                    energy_index
-                ].getFullEstimate()
-                energy_err = fit_result_info["estimates"][
-                    energy_index
-                ].getSymmetricError()
+                energy_result = fit_result_info["estimates"][energy_index].getFullEstimate()
+                energy_err = fit_result_info["estimates"][energy_index].getSymmetricError()
                 plt.hlines(energy_result, tmin, tmax, color="black", zorder=2)
                 plt.gca().add_patch(
                     patches.Rectangle(
@@ -386,9 +347,7 @@ class PlottingHandler:
         if op1:
             labels.insert(0, f"corr: {str(op1)}")
         if fit_result_info["success"]:
-            labels.append(
-                f"$\chi^2/dof={format(float(fit_result_info['chisqrdof']),'.2f')}$"
-            )
+            labels.append(f"$\chi^2/dof={format(float(fit_result_info['chisqrdof']),'.2f')}$")
 
         self.moving_textbox(labels)
 
@@ -401,9 +360,7 @@ class PlottingHandler:
         plt.yscale("linear")
 
     # tmin or tmax plots
-    def add_fit_series(
-        self, t, e, de, color_index, filled=True, model=None
-    ):  # incorporate pvalue and chosen fit
+    def add_fit_series(self, t, e, de, color_index, filled=True, model=None):  # incorporate pvalue and chosen fit
         """add a set of fits to a tmin or tmax plot"""
         if filled:
             marker_color = psettings.colors[color_index]
@@ -430,9 +387,7 @@ class PlottingHandler:
         plt.axhline(energyval, color="black", ls="--", label=label)
 
     # tmin or tmax or t_whatever plots
-    def finalize_fit_series_plot(
-        self, series_type="min", title=None, ratio=False, species=None
-    ):
+    def finalize_fit_series_plot(self, series_type="min", title=None, ratio=False, species=None):
         """finalize a tmin or tmax plot"""
         # if self.latex:
         #     if ratio:
@@ -573,10 +528,7 @@ class PlottingHandler:
 
         # Add legend for color -> rotate level
         if color_coded:
-            legend_handles = [
-                patches.Patch(color=psettings.colors[i], label=f"Level {i}")
-                for i in range(max_counts)
-            ]
+            legend_handles = [patches.Patch(color=psettings.colors[i], label=f"Level {i}") for i in range(max_counts)]
             # Add legend to the plot
             plt.legend(handles=legend_handles, fontsize=15)
 
@@ -587,9 +539,7 @@ class PlottingHandler:
             for x, y, err in zip(ni_indexes, ni_levels, ni_errs):
                 min_index = x - index_shift
                 max_index = x + index_shift
-                plt.fill_between(
-                    [min_index, max_index], y - err, y + err, color="gray", alpha=0.4
-                )
+                plt.fill_between([min_index, max_index], y - err, y + err, color="gray", alpha=0.4)
                 plt.plot([min_index, max_index], [y, y], color="black", lw=1.0)
 
         if index == ndatasets - 1:
@@ -609,15 +559,10 @@ class PlottingHandler:
                     )
 
             if len(xticks[0]) == 2:
-                yticks = [
-                    f"{psettings.latex_format[irrep]}({mom})" for (irrep, mom) in xticks
-                ]
+                yticks = [f"{psettings.latex_format[irrep]}({mom})" for (irrep, mom) in xticks]
                 rotation = 0
             elif len(xticks[0]) == 3:
-                yticks = [
-                    f"{psettings.latex_format[irrep]}({mom}) {level}"
-                    for (irrep, mom, level) in xticks
-                ]
+                yticks = [f"{psettings.latex_format[irrep]}({mom}) {level}" for (irrep, mom, level) in xticks]
                 rotation = 90
 
             if reference:
@@ -632,15 +577,11 @@ class PlottingHandler:
 
             if not shift:  # If E_cm, swap x and y labels
                 plt.ylabel(xlabel)
-                plt.xticks(
-                    list(range(len(yticks))), yticks, size="small", rotation=rotation
-                )
+                plt.xticks(list(range(len(yticks))), yticks, size="small", rotation=rotation)
                 plt.xlim(min(indexes) - 1.0, max(indexes) + 1.0)
             else:
                 plt.xlabel(xlabel)
-                plt.yticks(
-                    list(range(len(yticks))), yticks, size="small", rotation=rotation
-                )
+                plt.yticks(list(range(len(yticks))), yticks, size="small", rotation=rotation)
                 plt.ylim(min(indexes) - 1.0, max(indexes) + 1.0)
 
                 # draws a dashed thin vertical line at 0
@@ -733,9 +674,7 @@ class PlottingHandler:
         with self.doc[index].create(pylatex.Figure(position="H")) as thisfig:
             if os.path.exists(leftplotfile) and os.path.exists(rightplotfile):
                 with self.doc[index].create(
-                    pylatex.SubFigure(
-                        position="b", width=pylatex.NoEscape(r"0.5\linewidth")
-                    )
+                    pylatex.SubFigure(position="b", width=pylatex.NoEscape(r"0.5\linewidth"))
                 ) as left_fig:
                     left_fig.add_image(
                         leftplotfile,
@@ -743,9 +682,7 @@ class PlottingHandler:
                         placement=pylatex.NoEscape("\centering"),
                     )
                 with self.doc[index].create(
-                    pylatex.SubFigure(
-                        position="b", width=pylatex.NoEscape(r"0.5\linewidth")
-                    )
+                    pylatex.SubFigure(position="b", width=pylatex.NoEscape(r"0.5\linewidth"))
                 ) as right_fig:
                     right_fig.add_image(
                         rightplotfile,
@@ -782,25 +719,16 @@ class PlottingHandler:
         """a table that includes the fit information of the correlators"""
         if reference:
             latex_rest_mass = psettings.latex_format[reference].replace("$", "")
-            headers = [
-                header.replace("latex_rest_mass", latex_rest_mass) for header in headers
-            ]
+            headers = [header.replace("latex_rest_mass", latex_rest_mass) for header in headers]
         headers = [pylatex.NoEscape(header) for header in headers]
         with self.doc[index].create(pylatex.Center()) as centered:
             centered.append(pylatex.utils.bold(pylatex.NoEscape(title)))
-            with centered.create(
-                pylatex.LongTable("|".join(["c"] * len(headers)))
-            ) as current_table:
+            with centered.create(pylatex.LongTable("|".join(["c"] * len(headers)))) as current_table:
                 current_table.add_row(headers)
                 current_table.add_hline()
                 for line in data:
                     line = [
-                        (
-                            psettings.latex_format[col]
-                            if col in psettings.latex_format.keys()
-                            else col
-                        )
-                        for col in line
+                        (psettings.latex_format[col] if col in psettings.latex_format.keys() else col) for col in line
                     ]
                     line = [pylatex.NoEscape(col) for col in line]
                     current_table.add_row(line)
@@ -821,6 +749,4 @@ class PlottingHandler:
 
     def compile_pdf(self, filename, index=0):
         """Compile the LaTeX document into a PDF file."""
-        utils.compile_pdf(
-            self.doc[index], filename
-        )  # detect compiler? -> if self.latex, check for pylatex?
+        utils.compile_pdf(self.doc[index], filename)  # detect compiler? -> if self.latex, check for pylatex?

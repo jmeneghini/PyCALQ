@@ -70,9 +70,7 @@ class ConfigHandler:
                         xml_file = True
 
                     # first level guaranteed to only have one index
-                    config_info[list(config_info.keys())[0]] = dict(
-                        config_info[list(config_info.keys())[0]]
-                    )
+                    config_info[list(config_info.keys())[0]] = dict(config_info[list(config_info.keys())[0]])
 
                     # issue with xml everything that is input is interpreted as a string. need to do more input processing if taken seriously
 
@@ -105,9 +103,7 @@ class ConfigHandler:
 
         # check that root is singular and that is the set one
         if len(self.configs.keys()) > 1:
-            logging.error(
-                f"Config cannot have more than one root. Only '{root}' is allowed."
-            )
+            logging.error(f"Config cannot have more than one root. Only '{root}' is allowed.")
 
         if list(self.configs.keys())[0] != root:
             logging.error(f"{root} config must have '{root}' as the root.")
@@ -116,17 +112,11 @@ class ConfigHandler:
         for requirement in requirements:
             if type(requirement) != dict:
                 if requirement not in self.configs[root].keys():
-                    logging.error(
-                        f"Missing parameter '{requirement}' in {root} config."
-                    )
+                    logging.error(f"Missing parameter '{requirement}' in {root} config.")
             else:
                 requirement_key = list(requirement.keys())[0]
                 if requirement_key not in self.configs[root].keys():
-                    logging.error(
-                        f"Missing parameter '{requirement_key}' in {root} config."
-                    )
+                    logging.error(f"Missing parameter '{requirement_key}' in {root} config.")
                 for requirementee in requirement[requirement_key]:
                     if requirementee not in self.configs[root][requirement_key].keys():
-                        logging.error(
-                            f"Missing parameter '{requirementee}' in {root} config."
-                        )
+                        logging.error(f"Missing parameter '{requirementee}' in {root} config.")

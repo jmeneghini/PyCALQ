@@ -92,17 +92,13 @@ class PyCALQ:
         if type(self.task_configs) != list:
             logging.error("Error in task configuration file. List tasks.")
 
-        self.proj_dir = pd.ProjectDirectoryHandler(
-            self.general_configs["project_dir"], TASK_ORDER
-        )
+        self.proj_dir = pd.ProjectDirectoryHandler(self.general_configs["project_dir"], TASK_ORDER)
 
         # sort tasks by task order
         task_names = [task.name for task in TASK_ORDER]
         self.task_configs.sort(
             key=lambda x: (
-                task_names.index(list(x.keys())[0])
-                if list(x.keys())[0] in task_names
-                else len(self.task_configs)
+                task_names.index(list(x.keys())[0]) if list(x.keys())[0] in task_names else len(self.task_configs)
             )
         )
 
@@ -117,15 +113,9 @@ class PyCALQ:
             if key[0] in TASK_NAMES.keys():
                 if TASK_NAMES[key[0]] in SIGMOND_TASKS:
                     sigmond_tasks.append(TASK_NAMES[key[0]])
-                max_task = (
-                    task_names.index(key[0])
-                    if task_names.index(key[0]) > max_task
-                    else max_task
-                )
+                max_task = task_names.index(key[0]) if task_names.index(key[0]) > max_task else max_task
         if sigmond_tasks:
-            self.sig_proj_hand = sph.SigmondProjectHandler(
-                self.general_configs, sigmond_tasks
-            )
+            self.sig_proj_hand = sph.SigmondProjectHandler(self.general_configs, sigmond_tasks)
 
         for task in TASK_ORDER[: max_task + 1]:
             self.proj_dir.set_task(task.value, task.name)

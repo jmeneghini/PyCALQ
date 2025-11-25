@@ -163,9 +163,7 @@ class ProjectDirectoryHandler:
             diag_key = f"-{rotate_type}-{tN}tN-{t0}t0-{tD}tD"
         if file_tag:
             file_tag = "_" + file_tag
-        return (
-            f"{self.task_name}{file_tag}-Nbin{rebin}{mom_key}{diag_key}_{sampling_type}"
-        )
+        return f"{self.task_name}{file_tag}-Nbin{rebin}{mom_key}{diag_key}_{sampling_type}"
 
     # filename for general samplings file
     def samplings_file(
@@ -187,10 +185,7 @@ class ProjectDirectoryHandler:
             sampling_type = "bins"
         else:
             sampling_type = sampling_type + "-samplings"  #'B' or 'J'
-        basename = (
-            self.filekey(mom, rebin, sampling_type, rotate_type, tN, t0, tD, file_tag)
-            + ".hdf5"
-        )
+        basename = self.filekey(mom, rebin, sampling_type, rotate_type, tN, t0, tD, file_tag) + ".hdf5"
         if channel:
             return os.path.join(self.data_subdir(binned), basename + f"[{channel}]")
         else:
@@ -200,9 +195,7 @@ class ProjectDirectoryHandler:
     def estimates_file(self, key=""):
         if key:
             key += "_"
-        return os.path.join(
-            self.data_dir("estimates"), f"{self.task_name}_{key}estimates.csv"
-        )
+        return os.path.join(self.data_dir("estimates"), f"{self.task_name}_{key}estimates.csv")
 
     # filename for full input yaml file
     def full_input_file(self, run_tag=""):
@@ -212,15 +205,11 @@ class ProjectDirectoryHandler:
 
     # file for correlator estimates
     def corr_estimates_file(self, corr):
-        return os.path.join(
-            self.data_dir("estimates"), f"{corr}_correlator_estimates.csv"
-        )
+        return os.path.join(self.data_dir("estimates"), f"{corr}_correlator_estimates.csv")
 
     # file for effective energy of correlator estimates
     def effen_estimates_file(self, corr):
-        return os.path.join(
-            self.data_dir("estimates"), f"{corr}_effenergy_estimates.csv"
-        )
+        return os.path.join(self.data_dir("estimates"), f"{corr}_effenergy_estimates.csv")
 
     # filename for corr plot file
     def corr_plot_file(self, corr, ptype):
@@ -231,9 +220,7 @@ class ProjectDirectoryHandler:
         return os.path.join(self.plot_dir(f"{ptype}s"), f"{corr}_effenergy.{ptype}")
 
     # filename for correlator tmin plot file. Plots spectrum fit results for varying tmins
-    def corr_fit_series_plot_file(
-        self, corr, energy_type, ptype, series_type="tmin", ratio_tag=""
-    ):
+    def corr_fit_series_plot_file(self, corr, energy_type, ptype, series_type="tmin", ratio_tag=""):
         if ratio_tag != "":
             ratio_tag = "_" + ratio_tag
         return os.path.join(
@@ -244,13 +231,9 @@ class ProjectDirectoryHandler:
     # filename for latex pdf where all plots and relevant information is gathered
     def summary_file(self, mom=None):
         if mom != None:
-            return os.path.join(
-                self.plot_dir(), f"{self.task_name}-PSQ{mom}_summary"
-            )  # add channel? project name?
+            return os.path.join(self.plot_dir(), f"{self.task_name}-PSQ{mom}_summary")  # add channel? project name?
         else:
-            return os.path.join(
-                self.plot_dir(), f"{self.task_name}_summary"
-            )  # add channel? project name?
+            return os.path.join(self.plot_dir(), f"{self.task_name}_summary")  # add channel? project name?
 
     # filename for plot of the interacting energy levels of all spectrum fits grouped by irrep
     def summary_plot_file(self, ptype, filetag=""):
@@ -286,9 +269,7 @@ class ProjectDirectoryHandler:
         if run_tag:
             tag += f"-{run_tag}"
         if tm.Task.rotate_corrs.name == self.task_name:
-            return self.samplings_file(
-                False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag
-            )
+            return self.samplings_file(False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag)
         else:
             return self.all_tasks[tm.Task.rotate_corrs.name].samplings_file(
                 False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag
@@ -296,14 +277,10 @@ class ProjectDirectoryHandler:
 
     # filename for histogram plot of operator overlaps
     def operator_overlaps_plot(self, op, ptype):
-        return os.path.join(
-            self.plot_dir(f"{ptype}s"), f"{op}_operator_overlaps.{ptype}"
-        )
+        return os.path.join(self.plot_dir(f"{ptype}s"), f"{op}_operator_overlaps.{ptype}")
 
     def ni_level_certainty_plot_file(self, channel, ptype):
-        return os.path.join(
-            self.plot_dir(f"{ptype}s"), f"{channel}_ni_level_certainty.{ptype}"
-        )
+        return os.path.join(self.plot_dir(f"{ptype}s"), f"{channel}_ni_level_certainty.{ptype}")
 
     # filename for samplings of operator overlaps
     def operator_overlaps_samplings(
@@ -321,9 +298,7 @@ class ProjectDirectoryHandler:
         if run_tag:
             tag += f"-{run_tag}"
         if tm.Task.fit_spectrum.name == self.task_name:
-            return self.samplings_file(
-                False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag
-            )
+            return self.samplings_file(False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag)
         else:
             return self.all_tasks[tm.Task.fit_spectrum.name].samplings_file(
                 False, channel, None, rebin, sampling_type, rotate_type, tN, t0, tD, tag
@@ -335,20 +310,10 @@ class ProjectDirectoryHandler:
         if tm.Task.average_corrs.name == self.task_name:
             if only_mom:
                 for mom in only_mom:
-                    data_files += list(
-                        glob.glob(
-                            self.samplings_file(binned, None, mom, rebin, sampling_type)
-                        )
-                    )
+                    data_files += list(glob.glob(self.samplings_file(binned, None, mom, rebin, sampling_type)))
             else:
-                data_files += list(
-                    glob.glob(
-                        self.samplings_file(binned, None, "*", rebin, sampling_type)
-                    )
-                )
-            data_files.append(
-                self.samplings_file(binned, None, None, rebin, sampling_type)
-            )
+                data_files += list(glob.glob(self.samplings_file(binned, None, "*", rebin, sampling_type)))
+            data_files.append(self.samplings_file(binned, None, None, rebin, sampling_type))
         else:
             if only_mom:
                 for mom in only_mom:
@@ -368,9 +333,7 @@ class ProjectDirectoryHandler:
                     )
                 )
             data_files.append(
-                self.all_tasks[tm.Task.average_corrs.name].samplings_file(
-                    binned, None, None, rebin, sampling_type
-                )
+                self.all_tasks[tm.Task.average_corrs.name].samplings_file(binned, None, None, rebin, sampling_type)
             )
         return data_files
 
@@ -426,24 +389,16 @@ class ProjectDirectoryHandler:
     # removes all present averaged data files
     def remove_averaged_data(self, binned, rebin, sampling_type=None):
         if tm.Task.average_corrs.name == self.task_name:
-            for f in glob.glob(
-                self.samplings_file(binned, None, "*", rebin, sampling_type)
-            ):
+            for f in glob.glob(self.samplings_file(binned, None, "*", rebin, sampling_type)):
                 os.remove(f)
-            for f in glob.glob(
-                self.samplings_file(binned, None, "", rebin, sampling_type)
-            ):
+            for f in glob.glob(self.samplings_file(binned, None, "", rebin, sampling_type)):
                 os.remove(f)
         else:
             for f in glob.glob(
-                self.all_tasks[tm.Task.average_corrs.name].samplings_file(
-                    binned, None, "*", rebin, sampling_type
-                )
+                self.all_tasks[tm.Task.average_corrs.name].samplings_file(binned, None, "*", rebin, sampling_type)
             ):
                 os.remove(f)
             for f in glob.glob(
-                self.all_tasks[tm.Task.average_corrs.name].samplings_file(
-                    binned, None, "", rebin, sampling_type
-                )
+                self.all_tasks[tm.Task.average_corrs.name].samplings_file(binned, None, "", rebin, sampling_type)
             ):
                 os.remove(f)

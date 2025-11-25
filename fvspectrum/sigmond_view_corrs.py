@@ -48,17 +48,13 @@ class SigmondPreviewCorrs:
         self.proj_file_handler = proj_file_handler
 
         if not task_params:
-            logging.critical(
-                f"No directory to view. Add 'raw_data_files' to '{task_name}' task parameters."
-            )
+            logging.critical(f"No directory to view. Add 'raw_data_files' to '{task_name}' task parameters.")
 
         # check that raw_data_files are real files and not in project
         raw_data_files = []
         if "raw_data_files" in task_params.keys():
             raw_data_files = task_params["raw_data_files"]
-        raw_data_files = sigmond_util.check_raw_data_files(
-            raw_data_files, general_params["project_dir"]
-        )
+        raw_data_files = sigmond_util.check_raw_data_files(raw_data_files, general_params["project_dir"])
 
         # self.project_info = sigmond_util.setup_project(general_params,raw_data_files)
 
@@ -73,9 +69,7 @@ class SigmondPreviewCorrs:
             "figheight": 6,
             "separate_mom": True,
         }
-        sigmond_util.update_params(
-            self.other_params, task_params
-        )  # update other_params with task_params,
+        sigmond_util.update_params(self.other_params, task_params)  # update other_params with task_params,
         # otherwise fill in missing task params
 
         if (
@@ -110,11 +104,7 @@ class SigmondPreviewCorrs:
         log_path = os.path.join(self.proj_file_handler.log_dir(), "ops_log.yml")
         ops_list = {}
         ops_list["channels"] = {
-            str(channel): {
-                "operators": [
-                    str(op) for op in self.data_handler.getChannelOperators(channel)
-                ]
-            }
+            str(channel): {"operators": [str(op) for op in self.data_handler.getChannelOperators(channel)]}
             for channel in self.data_handler.raw_channels
         }
 
@@ -122,25 +112,18 @@ class SigmondPreviewCorrs:
         with open(log_path, "w+") as log_file:
             yaml.dump(ops_list, log_file)
 
-        save_to_self = (
-            not self.other_params["generate_estimates"] and self.other_params["plot"]
-        )
+        save_to_self = not self.other_params["generate_estimates"] and self.other_params["plot"]
         if save_to_self:
             self.data = {}
 
-        if (
-            not self.other_params["generate_estimates"]
-            and not self.other_params["plot"]
-        ):
+        if not self.other_params["generate_estimates"] and not self.other_params["plot"]:
             logging.warning(
                 "You have set 'generate_estimates' to 'False' and 'plot' to 'False' thus making this task obsolete. Congrats."
             )
             return
 
         self.moms = []
-        logging.info(
-            f"Saving correlator estimates to directory {self.proj_file_handler.data_dir()}..."
-        )
+        logging.info(f"Saving correlator estimates to directory {self.proj_file_handler.data_dir()}...")
         for channel in self.channels:
             self.moms.append(channel.psq)
             if save_to_self:
@@ -161,9 +144,7 @@ class SigmondPreviewCorrs:
                     )
                     if save_to_self:
                         self.data[channel][op1][op2] = {}
-                        self.data[channel][op1][op2]["corr"] = (
-                            sigmond_util.estimates_to_df(estimates)
-                        )
+                        self.data[channel][op1][op2]["corr"] = sigmond_util.estimates_to_df(estimates)
                     else:
                         sigmond_util.estimates_to_csv(
                             estimates,
@@ -181,9 +162,7 @@ class SigmondPreviewCorrs:
                         self.project_handler.vev_const,
                     )
                     if save_to_self:
-                        self.data[channel][op1][op2]["effen"] = (
-                            sigmond_util.estimates_to_df(estimates)
-                        )
+                        self.data[channel][op1][op2]["effen"] = sigmond_util.estimates_to_df(estimates)
                     else:
                         sigmond_util.estimates_to_csv(
                             estimates,
@@ -193,9 +172,7 @@ class SigmondPreviewCorrs:
     def plot(self):
         # make plot for each correlator -> save to pickle and pdf
         if self.other_params["plot"]:
-            logging.info(
-                f"Saving plots to directory {self.proj_file_handler.plot_dir()}..."
-            )
+            logging.info(f"Saving plots to directory {self.proj_file_handler.plot_dir()}...")
         else:
             logging.info(f"No plots requested.")
             return
@@ -208,10 +185,7 @@ class SigmondPreviewCorrs:
         # loop through same channels #make loading bar
         if self.project_handler.nodes:
             chunk_size = int(len(self.channels) / self.project_handler.nodes) + 1
-            channels_per_node = [
-                self.channels[i : i + chunk_size]
-                for i in range(0, len(self.channels), chunk_size)
-            ]
+            channels_per_node = [self.channels[i : i + chunk_size] for i in range(0, len(self.channels), chunk_size)]
         if not self.other_params["generate_estimates"] and self.other_params["plot"]:
             if self.project_handler.nodes:
                 processes = []
@@ -264,9 +238,7 @@ class SigmondPreviewCorrs:
                 plh.append_section(str(channel), index)
                 for op1 in self.data_handler.getChannelOperators(channel):
                     for op2 in self.data_handler.getChannelOperators(channel):
-                        corr = sigmond.CorrelatorInfo(
-                            op1.operator_info, op2.operator_info
-                        )
+                        corr = sigmond.CorrelatorInfo(op1.operator_info, op2.operator_info)
                         corr_name = repr(corr).replace(" ", "-")
                         # check that files exist
                         plh.add_correlator_subsection(
@@ -317,14 +289,10 @@ class SigmondPreviewCorrs:
                     for i, psq in enumerate(self.moms):
                         plh.compile_pdf(self.proj_file_handler.summary_file(psq), i)
                     logging.getLogger().setLevel(loglevel)
-                logging.info(
-                    f"Summary files saved to {self.proj_file_handler.summary_file('*')}.pdf."
-                )
+                logging.info(f"Summary files saved to {self.proj_file_handler.summary_file('*')}.pdf.")
             else:
                 plh.compile_pdf(self.proj_file_handler.summary_file())
-                logging.info(
-                    f"Summary file saved to {self.proj_file_handler.summary_file()}.pdf."
-                )
+                logging.info(f"Summary file saved to {self.proj_file_handler.summary_file()}.pdf.")
 
     def write_channel_plots_data(self, channels, plh):
         if type(channels) == list:
@@ -333,8 +301,7 @@ class SigmondPreviewCorrs:
                     self.data_handler.getChannelOperators(channel),
                     plh,
                     self.other_params["create_pickles"],
-                    self.other_params["create_pdfs"]
-                    or self.other_params["create_summary"],
+                    self.other_params["create_pdfs"] or self.other_params["create_summary"],
                     self.proj_file_handler,
                     self.data[channel],
                 )
@@ -356,8 +323,7 @@ class SigmondPreviewCorrs:
                     self.data_handler.getChannelOperators(channel),
                     plh,
                     self.other_params["create_pickles"],
-                    self.other_params["create_pdfs"]
-                    or self.other_params["create_summary"],
+                    self.other_params["create_pdfs"] or self.other_params["create_summary"],
                     self.proj_file_handler,
                 )
         else:

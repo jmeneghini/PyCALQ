@@ -80,9 +80,7 @@ class SigmondProjectHandler:
 
         # these can and will matter but only for special cases. Will need extra care when coding up.
         # only coding up if we come across an instance of needing such
-        self.effective_energy_type = (
-            0  # 0=TimeForward, 1=TimeSymmetric, 2=TimeBackward?
-        )
+        self.effective_energy_type = 0  # 0=TimeForward, 1=TimeSymmetric, 2=TimeBackward?
 
     # for a given set of data, manage whether to keep, delete, or search for data
     def add_data(
@@ -95,12 +93,8 @@ class SigmondProjectHandler:
         corr_data,
     ):
         # files already loaded into memory
-        present_files = list(current_data_files.bl_corr_files) + list(
-            current_data_files.bl_vev_files
-        )
-        present_files += list(current_data_files.bin_files) + list(
-            current_data_files.sampling_files
-        )
+        present_files = list(current_data_files.bl_corr_files) + list(current_data_files.bl_vev_files)
+        present_files += list(current_data_files.bin_files) + list(current_data_files.sampling_files)
 
         # files desired for next task
         parsed_raw_data_files = parse_data_files(in_data_files)
@@ -140,35 +134,25 @@ class SigmondProjectHandler:
                 if data_files.bin_files:
                     logging.info("Reading bin data")
                     for bin_file in tqdm.tqdm(data_files.bin_files):
-                        new_corr_data += self.data_handler._findSigmondData(
-                            bin_file, sigmond.FileType.Bins
-                        )
+                        new_corr_data += self.data_handler._findSigmondData(bin_file, sigmond.FileType.Bins)
 
                 if data_files.sampling_files:
                     logging.info("Reading sampling data")
                     for smp_file in tqdm.tqdm(data_files.sampling_files):
-                        new_corr_data += self.data_handler._findSigmondData(
-                            smp_file, sigmond.FileType.Samplings
-                        )
+                        new_corr_data += self.data_handler._findSigmondData(smp_file, sigmond.FileType.Samplings)
 
                 for channel in new_corr_data._data_files.keys():
                     if channel in corr_data._data_files:
-                        corr_data._data_files[channel] += new_corr_data._data_files[
-                            channel
-                        ]
+                        corr_data._data_files[channel] += new_corr_data._data_files[channel]
                     else:
-                        corr_data._data_files[channel] = new_corr_data._data_files[
-                            channel
-                        ]
+                        corr_data._data_files[channel] = new_corr_data._data_files[channel]
                 for corr_info, corr_data_info in new_corr_data._correlators.items():
                     corr_data.addCorrelator(corr_info, **corr_data_info._asdict())
 
-                current_data_files._sampling_files = (
-                    current_data_files._sampling_files.union(data_files._sampling_files)
+                current_data_files._sampling_files = current_data_files._sampling_files.union(
+                    data_files._sampling_files
                 )
-                current_data_files._bin_files = current_data_files._bin_files.union(
-                    data_files._bin_files
-                )
+                current_data_files._bin_files = current_data_files._bin_files.union(data_files._bin_files)
                 current_data_files._bl_corr_files.update(data_files._bl_corr_files)
                 current_data_files._bl_vev_files.update(data_files._bl_vev_files)
 

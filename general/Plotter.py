@@ -18,9 +18,7 @@ class Plotter:
             if i == 0:
                 x_range_i = []
                 y_range_i = []
-                for en in np.linspace(
-                    average_energies[i] - 0.01, average_energies[i] + 0.01, 100
-                ):
+                for en in np.linspace(average_energies[i] - 0.01, average_energies[i] + 0.01, 100):
                     x_range_i.append(self.fit.qc.q2(en, 0))
                     y_range_i.append(self.fit.qc.qcotd(en, i, 0))
                 x_range.append(x_range_i)
@@ -28,9 +26,7 @@ class Plotter:
             else:
                 xp = []
                 yp = []
-                for en in np.linspace(
-                    average_energies[i] - 0.01, average_energies[i] + 0.01, 100
-                ):
+                for en in np.linspace(average_energies[i] - 0.01, average_energies[i] + 0.01, 100):
                     xp.append(self.fit.qc.q2(en, 0))
                     yp.append(self.fit.qc.qcotd(en, i, 0))
                 x_range.append(xp)
@@ -73,9 +69,7 @@ class Plotter:
         legend_handles = []  # Create an empty list to store custom legend handles
         for i in range(len(average_energies)):
             plt.plot(x[i], y[i], marker=shapes[i], color="blue", label=labels[i])
-            plt.plot(
-                x_range[i], y_range[i], color="blue", alpha=0.8
-            )  # Plot the ranges with transparency
+            plt.plot(x_range[i], y_range[i], color="blue", alpha=0.8)  # Plot the ranges with transparency
             # Add a custom legend handle (marker with no line)
             legend_handles.append(
                 Line2D(
@@ -97,16 +91,12 @@ class Plotter:
         plt.ylim(0, 0.6)
         plt.xlim(-0.22, 0.05)
         # Customize the legend with custom handles (markers only)
-        legend = plt.legend(
-            handles=legend_handles, loc="lower right", title="Legend", prop={"size": 12}
-        )
+        legend = plt.legend(handles=legend_handles, loc="lower right", title="Legend", prop={"size": 12})
         # legend.set_title('Legend', prop={'size': 12})  # Set legend title and font size
 
         plt.show()
 
-    def phase_shift_plot_error(
-        self, results_file, best_fit_a, best_fit_b, num_points=100, confidence_level=95
-    ):
+    def phase_shift_plot_error(self, results_file, best_fit_a, best_fit_b, num_points=100, confidence_level=95):
         # load data from the bootstrap file, currently only using 100
         data_bs = np.loadtxt(results_file)
 
@@ -123,9 +113,7 @@ class Plotter:
 
         # Generate deviations from the best-fit parameters using the covariance matrix
         np.random.seed(42)  # for reproducibility
-        parameter_deviations = np.random.multivariate_normal(
-            [0, 0], covariance_matrix, num_points
-        )
+        parameter_deviations = np.random.multivariate_normal([0, 0], covariance_matrix, num_points)
 
         # Calculate the best-fit line without parameter variations
         best_fit_line = (-1 / best_fit_a) + 0.5 * best_fit_b * q2_values
@@ -235,9 +223,7 @@ class Plotter:
 
             for i, (data, label, color) in enumerate(datasets, start=1):
                 plt.subplot(2, 2, i)
-                plt.hist(
-                    data[1:], bins=50, color=color, alpha=0.7, label="Full Distribution"
-                )
+                plt.hist(data[1:], bins=50, color=color, alpha=0.7, label="Full Distribution")
                 plt.title(label)
 
                 mean_value = data[0]
@@ -254,9 +240,7 @@ class Plotter:
                     alpha=0.5,
                     label="1 Sigma Distribution",
                 )
-                plt.axvline(
-                    mean_value, color="black", linestyle="--"
-                )  # Add vertical dashed line at mean
+                plt.axvline(mean_value, color="black", linestyle="--")  # Add vertical dashed line at mean
                 plt.legend()
 
             plt.tight_layout()
@@ -285,9 +269,7 @@ class Plotter:
                     color=color,
                     alpha=0.7,
                 )
-                plt.axvline(
-                    mean_value, color=color, linestyle="--"
-                )  # Add vertical dashed line at mean
+                plt.axvline(mean_value, color=color, linestyle="--")  # Add vertical dashed line at mean
                 plt.legend(fontsize=14)
 
             plt.title("Bootstrap Energy Samples")
