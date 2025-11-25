@@ -22,7 +22,7 @@ from sigmond_scripts import util as utils
 from sigmond_scripts import operator
 from sigmond_scripts import fit_info, sigmond_info, sigmond_input
 
-doc = '''
+doc = """
 fit_spectrum - task for fitting the single hadron and/or rotated correlators in order to determine
     energy spectrum of each channel of interest. If rotated, operator overlaps on the original
     operators are computed and plotted as well.
@@ -116,33 +116,55 @@ fit_spectrum:
   t0: 5                                 #not required #defualt finds most recently used file
   tD: 10                                #not required #defualt finds most recently used file
   pivot_type: 0                         #not required #defualt finds most recently used file; 0 - single pivot, 1 - rolling pivot
-'''
+"""
 
-#for guessing number of hadrons in an operator
-hadron_names = ['N', 'X', 'k', 'S', 'L', 'pi', 'P', 'K', 'Phi', 'Rho'] #common names for fundamental hadrons
-hadron_tags = ['(',"-","["] #common tags used to associate irreps to the common names
+# for guessing number of hadrons in an operator
+hadron_names = [
+    "N",
+    "X",
+    "k",
+    "S",
+    "L",
+    "pi",
+    "P",
+    "K",
+    "Phi",
+    "Rho",
+]  # common names for fundamental hadrons
+hadron_tags = [
+    "(",
+    "-",
+    "[",
+]  # common tags used to associate irreps to the common names
 
-#use the above lists to guess number of hadrons in an operator
-def count_hadrons(opname): #based on the "name" piece of an operator (the part that is user define)
+
+# use the above lists to guess number of hadrons in an operator
+def count_hadrons(
+    opname,
+):  # based on the "name" piece of an operator (the part that is user define)
     temp_opname = opname
     count = 0
     for hadron in hadron_names:
         for tag in hadron_tags:
-            count += temp_opname.count(hadron+tag)
-            temp_opname.replace(hadron+tag,"")
+            count += temp_opname.count(hadron + tag)
+            temp_opname.replace(hadron + tag, "")
     return count
 
-#gets a list of hadrons in an operator name. Used for assembling ni levels for ratio fits
-def get_hadrons(opname): #based on the "name" piece of an operator (the part that is user define)
+
+# gets a list of hadrons in an operator name. Used for assembling ni levels for ratio fits
+def get_hadrons(
+    opname,
+):  # based on the "name" piece of an operator (the part that is user define)
     sh_list = []
     sh_psq_list = []
     for hadron in hadron_names:
         for tag in hadron_tags:
-            if hadron+tag in opname:
-                parts = opname.split(hadron+tag)[1:]
-                sh_list += [hadron]*len(parts)
+            if hadron + tag in opname:
+                parts = opname.split(hadron + tag)[1:]
+                sh_list += [hadron] * len(parts)
                 sh_psq_list += [part[0] for part in parts]
-    return [f"{sh}({psq})" for sh,psq in zip(sh_list,sh_psq_list)]
+    return [f"{sh}({psq})" for sh, psq in zip(sh_list, sh_psq_list)]
+
 
 def get_op_name(operator_info):
     if operator_info.isBasicLapH():
@@ -150,339 +172,455 @@ def get_op_name(operator_info):
     else:
         return operator_info.getGenIrrep().getIDName()
 
-#sort a set of levels (list of dicts) by key "ecm value"
-def energy_sort(item): #sort a list oject of dictionaries by the dictionary key "ecm value"
+
+# sort a set of levels (list of dicts) by key "ecm value"
+def energy_sort(
+    item,
+):  # sort a list oject of dictionaries by the dictionary key "ecm value"
     return item["ecm value"]
 
-#sort a list of lists by the sorting_index element of the list element 
-    #by first setting the variable sorting_index  with table_sort_set and then using 
-    #table sort for the sorting
+
+# sort a list of lists by the sorting_index element of the list element
+# by first setting the variable sorting_index  with table_sort_set and then using
+# table sort for the sorting
 sorting_index = [3]
-def table_sort_set(index): 
+
+
+def table_sort_set(index):
     sorting_index[0] = index
     return table_sort
-def table_sort(item): #sort a list of lists by fourth element
+
+
+def table_sort(item):  # sort a list of lists by fourth element
     return item[sorting_index[0]]
 
-class Obs(Enum): #relevant obs shortnames
-    dElab = 0 #shift energy
-    elab = 1 #energy in lab frame
-    ecm = 2 #energy in center of momentum frame
-    ecm_ref = 3 #energy in center of momentum from divided by single hadron mass
-    elab_ref = 4 #energy in lab frame divided by single hadron mass
-    amp = 5 #amplitude, assumed lab frame
-    dElab_ref = 6 #shift energy divided by single hadron mass
-    
+
+class Obs(Enum):  # relevant obs shortnames
+    dElab = 0  # shift energy
+    elab = 1  # energy in lab frame
+    ecm = 2  # energy in center of momentum frame
+    ecm_ref = 3  # energy in center of momentum from divided by single hadron mass
+    elab_ref = 4  # energy in lab frame divided by single hadron mass
+    amp = 5  # amplitude, assumed lab frame
+    dElab_ref = 6  # shift energy divided by single hadron mass
+
     @classmethod
     def energy_observables(cls):
         """Return list of all observable names"""
         return [obs.name for obs in cls]
 
-#to do: 
-#have user input how the shifts are calculated
-#mpi
-#add other task types (different NI levels, rebin analysis, compare spectrums, )
+
+# to do:
+# have user input how the shifts are calculated
+# mpi
+# add other task types (different NI levels, rebin analysis, compare spectrums, )
+
 
 class SigmondSpectrumFits:
     @property
-    def info(self): 
+    def info(self):
         return doc
-        
-    #from the used defined list of single hadrons
+
+    # from the used defined list of single hadrons
     def get_single_hadron(self, corr):
-        for hadron in self.other_params['single_hadrons']:
-            if corr in self.other_params['single_hadrons'][hadron]:
-                return hadron, self.other_params['single_hadrons'][hadron].index(corr)
+        for hadron in self.other_params["single_hadrons"]:
+            if corr in self.other_params["single_hadrons"][hadron]:
+                return hadron, self.other_params["single_hadrons"][hadron].index(corr)
         return None, None
-    
-    #get operator object from string formatted as sh(d^2); for example N(0)
+
+    # get operator object from string formatted as sh(d^2); for example N(0)
     def get_sh_operator(self, sh_string):
-        return operator.Operator(self.other_params['single_hadrons'][sh_string.split('(')[0]][int(sh_string.split('(')[1][:-1])])
-    
-    #sigmond logs of chosen fits
+        return operator.Operator(
+            self.other_params["single_hadrons"][sh_string.split("(")[0]][
+                int(sh_string.split("(")[1][:-1])
+            ]
+        )
+
+    # sigmond logs of chosen fits
     def fit_log_file(self, op):
-        return os.path.join(self.proj_files_handler.log_dir("fit_logs"), f"{str(op).replace(' ','_')}_fit_log.xml")
+        return os.path.join(
+            self.proj_files_handler.log_dir("fit_logs"),
+            f"{str(op).replace(' ','_')}_fit_log.xml",
+        )
 
     def fit_input_file(self, op):
-        return os.path.join(self.proj_files_handler.log_dir("fit_logs"), f"{str(op).replace(' ','_')}_fit_input.xml")
-    
-    #configures the directory of potential outputs
+        return os.path.join(
+            self.proj_files_handler.log_dir("fit_logs"),
+            f"{str(op).replace(' ','_')}_fit_input.xml",
+        )
+
+    # configures the directory of potential outputs
     def samplings_file(self, filetag, channel=None):
         if self.project_handler.project_info.sampling_info.isJackknifeMode():
-            sampling_mode = 'J'
+            sampling_mode = "J"
         else:
-            sampling_mode = 'B'
-        rotate_type = 'SP'
-        if self.other_params['pivot_type']:
-            rotate_type = 'RP'
-        if self.other_params['run_tag']:
-            filetag+= '-'+self.other_params['run_tag']
-        return self.proj_files_handler.samplings_file(False, channel, None, 
-                                                     self.project_handler.project_info.bins_info.getRebinFactor(),
-                                                     sampling_mode, rotate_type, self.tN, self.t0, self.tD, filetag)
+            sampling_mode = "B"
+        rotate_type = "SP"
+        if self.other_params["pivot_type"]:
+            rotate_type = "RP"
+        if self.other_params["run_tag"]:
+            filetag += "-" + self.other_params["run_tag"]
+        return self.proj_files_handler.samplings_file(
+            False,
+            channel,
+            None,
+            self.project_handler.project_info.bins_info.getRebinFactor(),
+            sampling_mode,
+            rotate_type,
+            self.tN,
+            self.t0,
+            self.tD,
+            filetag,
+        )
 
-        
-    #filename for file output with the parameter fit samplings  of the interacting correlator fits 
-        #in sigmond hdf5 format with naming scheme based on sigmond scripts
-    def spectrum_fit_params_file( self, channel = None ): #add rotation info, and then average info
+    # filename for file output with the parameter fit samplings  of the interacting correlator fits
+    # in sigmond hdf5 format with naming scheme based on sigmond scripts
+    def spectrum_fit_params_file(
+        self, channel=None
+    ):  # add rotation info, and then average info
         return self.samplings_file("fitparams", channel)
-        
-    #filename for file output with samplings of the energy levels from the chosen fits
-    def spectrum_levels_file( self, channel = None ): #add rotation info, and then average info
+
+    # filename for file output with samplings of the energy levels from the chosen fits
+    def spectrum_levels_file(
+        self, channel=None
+    ):  # add rotation info, and then average info
         return self.samplings_file("levels", channel)
 
-    #filename for file output with samplings of the energy levels from the chosen fits in sigmond_hdf5 format
-    def spectrum_levels_sigmond_file( self, channel = None ): #add rotation info, and then average info
+    # filename for file output with samplings of the energy levels from the chosen fits in sigmond_hdf5 format
+    def spectrum_levels_sigmond_file(
+        self, channel=None
+    ):  # add rotation info, and then average info
         return self.samplings_file("levels_sigmond", channel)
-        
-    #filename for file output with the parameter fit samplings  of the noninteracting correlator fits 
-        #in sigmond hdf5 format with naming scheme based on sigmond scripts
-    def single_hadron_fit_params_file( self, channel = None):
+
+    # filename for file output with the parameter fit samplings  of the noninteracting correlator fits
+    # in sigmond hdf5 format with naming scheme based on sigmond scripts
+    def single_hadron_fit_params_file(self, channel=None):
         if self.project_handler.project_info.sampling_info.isJackknifeMode():
-            sampling_mode = 'J'
+            sampling_mode = "J"
         else:
-            sampling_mode = 'B'
-        run_tag = ''
-        if self.other_params['run_tag']:
-            run_tag='-'+self.other_params['run_tag']
-        return self.proj_files_handler.samplings_file(False, channel, None, 
-                                                     self.project_handler.project_info.bins_info.getRebinFactor(),
-                                                     sampling_mode, None, None, None, None, "sh_fitparams"+run_tag)
-        
-    #estimates of spectrum chosen fits filename
-    def spectrum_fit_estimates( self, type_tag = ''):
-        file_tag='levels'
-        if self.other_params['run_tag']:
-            file_tag='-'+self.other_params['run_tag']
+            sampling_mode = "B"
+        run_tag = ""
+        if self.other_params["run_tag"]:
+            run_tag = "-" + self.other_params["run_tag"]
+        return self.proj_files_handler.samplings_file(
+            False,
+            channel,
+            None,
+            self.project_handler.project_info.bins_info.getRebinFactor(),
+            sampling_mode,
+            None,
+            None,
+            None,
+            None,
+            "sh_fitparams" + run_tag,
+        )
+
+    # estimates of spectrum chosen fits filename
+    def spectrum_fit_estimates(self, type_tag=""):
+        file_tag = "levels"
+        if self.other_params["run_tag"]:
+            file_tag = "-" + self.other_params["run_tag"]
         rebin = self.project_handler.project_info.bins_info.getRebinFactor()
         if self.project_handler.project_info.sampling_info.isJackknifeMode():
-            sampling_mode = 'J-samplings'
+            sampling_mode = "J-samplings"
         else:
-            sampling_mode = 'B-samplings'
-        rotate_type = 'SP'
-        if self.other_params['pivot_type']:
-            rotate_type = 'RP'
+            sampling_mode = "B-samplings"
+        rotate_type = "SP"
+        if self.other_params["pivot_type"]:
+            rotate_type = "RP"
         if type_tag:
-            type_tag = '-'+type_tag
-        basename = self.proj_files_handler.filekey(None, rebin, sampling_mode, rotate_type, self.tN, self.t0, self.tD, file_tag)
-        return self.proj_files_handler.estimates_file(basename+type_tag)
-    
-    #estimates of spectrum fit variations filename
-    def spectrum_tmin_estimates( self, type_tag = ''):
-        if type_tag:
-            type_tag = '-'+type_tag
-        return self.proj_files_handler.estimates_file("tmin" + type_tag)
-    
-    #samplings file of operator overlaps
-    def operator_overlaps_samplings(self, channel = None):
-        if self.project_handler.project_info.sampling_info.isJackknifeMode():
-            sampling_mode = 'J'
-        else:
-            sampling_mode = 'B'
-        rotate_type = 'SP'
-        if self.other_params['pivot_type']:
-            rotate_type = 'RP'
-        return self.proj_files_handler.operator_overlaps_samplings(channel, self.project_handler.project_info.bins_info.getRebinFactor(),
-                                                     sampling_mode, rotate_type, self.tN, self.t0, self.tD, self.other_params["run_tag"])
+            type_tag = "-" + type_tag
+        basename = self.proj_files_handler.filekey(
+            None, rebin, sampling_mode, rotate_type, self.tN, self.t0, self.tD, file_tag
+        )
+        return self.proj_files_handler.estimates_file(basename + type_tag)
 
-    def __init__( self, task_name, proj_files_handler, general_configs, task_configs, sph ):
+    # estimates of spectrum fit variations filename
+    def spectrum_tmin_estimates(self, type_tag=""):
+        if type_tag:
+            type_tag = "-" + type_tag
+        return self.proj_files_handler.estimates_file("tmin" + type_tag)
+
+    # samplings file of operator overlaps
+    def operator_overlaps_samplings(self, channel=None):
+        if self.project_handler.project_info.sampling_info.isJackknifeMode():
+            sampling_mode = "J"
+        else:
+            sampling_mode = "B"
+        rotate_type = "SP"
+        if self.other_params["pivot_type"]:
+            rotate_type = "RP"
+        return self.proj_files_handler.operator_overlaps_samplings(
+            channel,
+            self.project_handler.project_info.bins_info.getRebinFactor(),
+            sampling_mode,
+            rotate_type,
+            self.tN,
+            self.t0,
+            self.tD,
+            self.other_params["run_tag"],
+        )
+
+    def __init__(
+        self, task_name, proj_files_handler, general_configs, task_configs, sph
+    ):
         self.task_name = task_name
-        self.proj_files_handler= proj_files_handler
+        self.proj_files_handler = proj_files_handler
         self.project_handler = sph
 
-        #set up sigmond necessities
+        # set up sigmond necessities
         self.ensemble_info = sigmond_util.get_ensemble_info(general_configs)
 
-        #define default fit params for anything other than tmin, tmax, and model
+        # define default fit params for anything other than tmin, tmax, and model
         self.default_fit_params = {
-            'ratio': False,
-            'exclude_times': [],
-            'noise_cutoff': 0.0,
-            'non_interacting_operators': None, #only desired for ratio or conspiracy fits
-            'sim_fit': False, 
-            'initial_params': {},
-            'priors': {},
-            'tmin_plots': [],
-            'tmax_plots': [],
-            'tmin_try_min': None,
-            'tmin_try_max': None,
+            "ratio": False,
+            "exclude_times": [],
+            "noise_cutoff": 0.0,
+            "non_interacting_operators": None,  # only desired for ratio or conspiracy fits
+            "sim_fit": False,
+            "initial_params": {},
+            "priors": {},
+            "tmin_plots": [],
+            "tmax_plots": [],
+            "tmin_try_min": None,
+            "tmin_try_max": None,
         }
 
-        #other params
+        # other params
         self.other_params = {
-            'create_pdfs': True,
-            'create_pickles': True,
-            'create_summary': True,
-            'plot': True,
-            'figwidth':8,
-            'figheight':6,
-            'generate_estimates': True,
-            'used_averaged_bins': True, #otherwise, use samplings
-            'use_rotated_samplings': True, #otherwise, use bins
-            'precompute': True,
-            'correlated': True,
-            'minimizer_info': {
-                'minimizer':'lmder',
-                'parameter_rel_tol': 1e-6,
-                'chisquare_rel_tol': 1e-4,
-                'max_iterations': 2000,
-                'verbosity': 'high',
+            "create_pdfs": True,
+            "create_pickles": True,
+            "create_summary": True,
+            "plot": True,
+            "figwidth": 8,
+            "figheight": 6,
+            "generate_estimates": True,
+            "used_averaged_bins": True,  # otherwise, use samplings
+            "use_rotated_samplings": True,  # otherwise, use bins
+            "precompute": True,
+            "correlated": True,
+            "minimizer_info": {
+                "minimizer": "lmder",
+                "parameter_rel_tol": 1e-6,
+                "chisquare_rel_tol": 1e-4,
+                "max_iterations": 2000,
+                "verbosity": "high",
             },
-            'correlator_fits': [],
-            'single_hadrons': {},
-            'single_hadrons_ratio': {},
-            'non_interacting_levels': {},
-            'unique_non_interacting_levels': {},
-            'reference_particle': None,
-            'thresholds': [],
-            'non_interacting_energy_sums': False,
-            'summary_plot_max_levels': None,
-            'compute_overlaps': True,
-            'use_overlaps_for_ratio': False,
-            'pivot_file': None,
-            'rotate_run_tag': "",
-            'run_tag': "",
-            'pivot_type': "*", #0 - single; 1 - rolling
-            'do_interacting_fits': True
+            "correlator_fits": [],
+            "single_hadrons": {},
+            "single_hadrons_ratio": {},
+            "non_interacting_levels": {},
+            "boost_NI_levels": True,
+            "unique_non_interacting_levels": {},
+            "reference_particle": None,
+            "thresholds": [],
+            "non_interacting_energy_sums": False,
+            "summary_plot_max_levels": None,
+            "compute_overlaps": True,
+            "use_overlaps_for_ratio": False,
+            "pivot_file": None,
+            "rotate_run_tag": "",
+            "run_tag": "",
+            "pivot_type": "*",  # 0 - single; 1 - rolling
+            "do_interacting_fits": True,
         }
-        sigmond_util.update_params(self.other_params,task_configs) #update other_params with task_params, 
-                                                                        #otherwise fill in missing task params
-        
-        #checks to make sure that default fits have been chosen for all fits
-        if 'default_corr_fit' not in task_configs and ('default_noninteracting_corr_fit' not in task_configs or 'default_noninteracting_corr_fit' not in task_configs):
-            logging.error("Must specify a 'default_corr_fit' or 'default_noninteracting_corr_fit' and 'default_noninteracting_corr_fit' in task configs.")
+        sigmond_util.update_params(
+            self.other_params, task_configs
+        )  # update other_params with task_params,
+        # otherwise fill in missing task params
 
-        #sets up default fits
-        if 'default_interacting_corr_fit' in task_configs and 'default_noninteracting_corr_fit' in task_configs:
-            self.default_interacting_corr_fit = task_configs['default_interacting_corr_fit']
-            self.default_noninteracting_corr_fit = task_configs['default_noninteracting_corr_fit']
-            self.check_fit_inputs(self.default_interacting_corr_fit, task_configs, 'default_interacting_corr_fit')
-            self.check_fit_inputs(self.default_noninteracting_corr_fit, task_configs, 'default_noninteracting_corr_fit')
+        # checks to make sure that default fits have been chosen for all fits
+        if "default_corr_fit" not in task_configs and (
+            "default_noninteracting_corr_fit" not in task_configs
+            or "default_noninteracting_corr_fit" not in task_configs
+        ):
+            logging.error(
+                "Must specify a 'default_corr_fit' or 'default_noninteracting_corr_fit' and 'default_noninteracting_corr_fit' in task configs."
+            )
+
+        # sets up default fits
+        if (
+            "default_interacting_corr_fit" in task_configs
+            and "default_noninteracting_corr_fit" in task_configs
+        ):
+            self.default_interacting_corr_fit = task_configs[
+                "default_interacting_corr_fit"
+            ]
+            self.default_noninteracting_corr_fit = task_configs[
+                "default_noninteracting_corr_fit"
+            ]
+            self.check_fit_inputs(
+                self.default_interacting_corr_fit,
+                task_configs,
+                "default_interacting_corr_fit",
+            )
+            self.check_fit_inputs(
+                self.default_noninteracting_corr_fit,
+                task_configs,
+                "default_noninteracting_corr_fit",
+            )
             self.default_corr_fit = None
         else:
             self.default_interacting_corr_fit = None
             self.default_noninteracting_corr_fit = None
-            self.default_corr_fit = task_configs['default_corr_fit']
-            self.check_fit_inputs(self.default_corr_fit, task_configs, 'default_corr_fit')
+            self.default_corr_fit = task_configs["default_corr_fit"]
+            self.check_fit_inputs(
+                self.default_corr_fit, task_configs, "default_corr_fit"
+            )
 
-        #get pivot information if given, otherwise will search for the most recently computed gevp in the project
-            #or if the file is given, just use that
-        self.tN = task_configs.pop('tN',"*")
-        self.t0 = task_configs.pop('t0',"*")
-        self.tD = task_configs.pop('tD',"*")
-            
-        #set up the filetag for sampling type
-        if self.project_handler.project_info.sampling_info.isJackknifeMode(): #do this better
-            sampling_mode = 'J'
+        # get pivot information if given, otherwise will search for the most recently computed gevp in the project
+        # or if the file is given, just use that
+        self.tN = task_configs.pop("tN", "*")
+        self.t0 = task_configs.pop("t0", "*")
+        self.tD = task_configs.pop("tD", "*")
+
+        # set up the filetag for sampling type
+        if (
+            self.project_handler.project_info.sampling_info.isJackknifeMode()
+        ):  # do this better
+            sampling_mode = "J"
         else:
-            sampling_mode = 'B'
+            sampling_mode = "B"
 
-        #use datafiles that were input, otherwise search this project
+        # use datafiles that were input, otherwise search this project
         averaged_data_files = []
-        if 'averaged_input_correlators_dir' in task_configs:
-            if type(task_configs['averaged_input_correlators_dir'])==list:
-                averaged_data_files=task_configs['averaged_input_correlators_dir']
+        if "averaged_input_correlators_dir" in task_configs:
+            if type(task_configs["averaged_input_correlators_dir"]) == list:
+                averaged_data_files = task_configs["averaged_input_correlators_dir"]
             else:
-                averaged_data_files.append(task_configs['averaged_input_correlators_dir'])
+                averaged_data_files.append(
+                    task_configs["averaged_input_correlators_dir"]
+                )
         else:
-            averaged_data_files = self.proj_files_handler.get_averaged_data(self.other_params['used_averaged_bins'],
-                                                                           self.project_handler.project_info.bins_info.getRebinFactor(),
-                                                                           sampling_mode)
-        #add datafiles to data handler object
+            averaged_data_files = self.proj_files_handler.get_averaged_data(
+                self.other_params["used_averaged_bins"],
+                self.project_handler.project_info.bins_info.getRebinFactor(),
+                sampling_mode,
+            )
+        # add datafiles to data handler object
         self.project_handler.add_averaged_data(averaged_data_files)
 
+        if self.other_params["do_interacting_fits"]:
+            # set up filetag for single pivot vs rolling pivot
+            rotate_type = self.other_params["pivot_type"]
+            if self.other_params["pivot_type"] != "*":
+                rotate_type = "SP"
+                if self.other_params["pivot_type"]:
+                    rotate_type = "RP"
 
-        if self.other_params['do_interacting_fits']:
-            #set up filetag for single pivot vs rolling pivot
-            rotate_type = self.other_params['pivot_type']
-            if self.other_params['pivot_type']!="*":
-                rotate_type = 'SP'
-                if self.other_params['pivot_type']:
-                    rotate_type = 'RP'
-                
-            #use datafiles that were input, otherwise search this project
+            # use datafiles that were input, otherwise search this project
             rotated_data_files = []
-            if 'rotated_input_correlators_dir' in task_configs:
-                if type(task_configs['rotated_input_correlators_dir'])==list:
-                    rotated_data_files=task_configs['rotated_input_correlators_dir']
+            if "rotated_input_correlators_dir" in task_configs:
+                if type(task_configs["rotated_input_correlators_dir"]) == list:
+                    rotated_data_files = task_configs["rotated_input_correlators_dir"]
                 else:
-                    rotated_data_files.append(task_configs['rotated_input_correlators_dir'])
-                    
+                    rotated_data_files.append(
+                        task_configs["rotated_input_correlators_dir"]
+                    )
+
             else:
-                #if not given, use the given gevp info to find the most recent file that matches the given info in the project
-                rotated_data_files = self.proj_files_handler.get_rotated_data(not self.other_params['use_rotated_samplings'],
-                                                                            self.project_handler.project_info.bins_info.getRebinFactor(), #sigmond_util.get_selected_mom(task_configs),
-                                                                            rotate_type, self.tN, self.t0, self.tD, sampling_mode, self.other_params['rotate_run_tag'])
+                # if not given, use the given gevp info to find the most recent file that matches the given info in the project
+                rotated_data_files = self.proj_files_handler.get_rotated_data(
+                    not self.other_params["use_rotated_samplings"],
+                    self.project_handler.project_info.bins_info.getRebinFactor(),  # sigmond_util.get_selected_mom(task_configs),
+                    rotate_type,
+                    self.tN,
+                    self.t0,
+                    self.tD,
+                    sampling_mode,
+                    self.other_params["rotate_run_tag"],
+                )
                 rotated_data_files.sort(key=os.path.getmtime)
                 rotated_data_files = [rotated_data_files[-1]]
 
-                pattern= self.proj_files_handler.all_tasks[tm.Task.rotate_corrs.name].samplings_file(not self.other_params['use_rotated_samplings'], 
-                                                        None, None, self.project_handler.project_info.bins_info.getRebinFactor(),sampling_mode, 
-                                                        "(?<pivot>\S+)", "(?<tN>[0-9]+)", "(?<t0>[0-9]+)", "(?<tD>[0-9]+)", self.other_params['rotate_run_tag'])
+                pattern = self.proj_files_handler.all_tasks[
+                    tm.Task.rotate_corrs.name
+                ].samplings_file(
+                    not self.other_params["use_rotated_samplings"],
+                    None,
+                    None,
+                    self.project_handler.project_info.bins_info.getRebinFactor(),
+                    sampling_mode,
+                    "(?<pivot>\S+)",
+                    "(?<tN>[0-9]+)",
+                    "(?<t0>[0-9]+)",
+                    "(?<tD>[0-9]+)",
+                    self.other_params["rotate_run_tag"],
+                )
                 match = regex.search(pattern, rotated_data_files[0])
                 if match:
                     match = match.groupdict()
-                    self.tN = match['tN']
-                    self.t0 = match['t0']
-                    self.tD = match['tD']
-                    if match['pivot']=='SP':
-                        self.other_params['pivot_type']=0
-                    elif match['pivot']=='RP':
-                        self.other_params['pivot_type']=1
-                    task_configs['tN'] = self.tN
-                    task_configs['t0'] = self.t0
-                    task_configs['tD'] = self.tD
-                    task_configs['pivot_type'] = self.other_params['pivot_type']
+                    self.tN = match["tN"]
+                    self.t0 = match["t0"]
+                    self.tD = match["tD"]
+                    if match["pivot"] == "SP":
+                        self.other_params["pivot_type"] = 0
+                    elif match["pivot"] == "RP":
+                        self.other_params["pivot_type"] = 1
+                    task_configs["tN"] = self.tN
+                    task_configs["t0"] = self.t0
+                    task_configs["tD"] = self.tD
+                    task_configs["pivot_type"] = self.other_params["pivot_type"]
 
-            if self.other_params['pivot_type']=='*' or self.tN=='*' or self.t0=='*' or self.tD=='*':
-                        logging.critical(f"Could not find the appropriate rotate file '{rotated_data_files[0]}'.")
+            if (
+                self.other_params["pivot_type"] == "*"
+                or self.tN == "*"
+                or self.t0 == "*"
+                or self.tD == "*"
+            ):
+                logging.critical(
+                    f"Could not find the appropriate rotate file '{rotated_data_files[0]}'."
+                )
 
-            #set up filetag for single pivot vs rolling pivot
-            rotate_type = 'SP'
-            if self.other_params['pivot_type']:
-                rotate_type = 'RP'
-            
-            #add datafiles to data handler object
+            # set up filetag for single pivot vs rolling pivot
+            rotate_type = "SP"
+            if self.other_params["pivot_type"]:
+                rotate_type = "RP"
+
+            # add datafiles to data handler object
             self.project_handler.add_rotated_data(rotated_data_files)
 
-            #get pivot file if one if not given -> need to fix for multiple rotations
-            if self.other_params["pivot_file"]==None: #
-                self.other_params["pivot_file"] = self.proj_files_handler.pivot_file(rotate_type, self.tN, self.t0, self.tD, self.other_params['rotate_run_tag'],
-                                                                                    self.project_handler.project_info.bins_info.getRebinFactor(),
-                                                                                    sampling_mode)
+            # get pivot file if one if not given -> need to fix for multiple rotations
+            if self.other_params["pivot_file"] == None:  #
+                self.other_params["pivot_file"] = self.proj_files_handler.pivot_file(
+                    rotate_type,
+                    self.tN,
+                    self.t0,
+                    self.tD,
+                    self.other_params["rotate_run_tag"],
+                    self.project_handler.project_info.bins_info.getRebinFactor(),
+                    sampling_mode,
+                )
                 task_configs["pivot_file"] = self.other_params["pivot_file"]
-            
+
             self.spectrum_ni_dict = {}
-                
-        #get single hadron channels in a list
+
+        # get single hadron channels in a list
         self.single_hadron_channels = []
-        for sh in self.other_params['single_hadrons']:
-            for op in self.other_params['single_hadrons'][sh]:
+        for sh in self.other_params["single_hadrons"]:
+            for op in self.other_params["single_hadrons"][sh]:
                 self.single_hadron_channels.append(operator.Operator(op).channel)
 
         # possible that the sh ops are in the same channel!
         self.single_hadron_channels = list(OrderedSet(self.single_hadron_channels))
 
-
-        #get channels from data handler
+        # get channels from data handler
         self.data_handler = self.project_handler.data_handler
         self.achannels = self.data_handler.averaged_channels[:]
         self.rchannels = self.data_handler.rotated_channels[:]
-                
 
-
-        #select channels specified by user #remove unwanted channels
-        final_channels = sigmond_util.filter_channels( task_configs, self.rchannels)
-        remove_channels = list(set(self.rchannels)-set(final_channels))
+        # select channels specified by user #remove unwanted channels
+        final_channels = sigmond_util.filter_channels(task_configs, self.rchannels)
+        remove_channels = list(set(self.rchannels) - set(final_channels))
         self.project_handler.remove_rotated_data_channels(remove_channels)
         self.rchannels = final_channels
-        
-        
 
-        #select unqualified and qualified channels
+        # select unqualified and qualified channels
         rm_channels = []
         self.single_hadron_indices_per_channel = {}
-        for channel in self.achannels: #remove interacting operators that need to be rotated
+        for (
+            channel
+        ) in self.achannels:  # remove interacting operators that need to be rotated
             op_hadron_counts = []
             for op in self.data_handler.getAveragedOperators(channel):
                 op_info = op.operator_info
@@ -490,72 +628,76 @@ class SigmondSpectrumFits:
                 if op_info.isGenIrrep():
                     opname = op_info.getGenIrrep().getIDName()
                     num_hadrons = count_hadrons(opname)
-                else: 
+                else:
                     num_hadrons = op_info.getBasicLapH().getNumberOfHadrons()
-                
+
                 op_hadron_counts.append(num_hadrons)
-                    
-                
+
             op_hadron_counts = np.array(op_hadron_counts)
-            if len(self.data_handler.getAveragedOperators(channel))>1 and np.all(op_hadron_counts!=1):
+            if len(self.data_handler.getAveragedOperators(channel)) > 1 and np.all(
+                op_hadron_counts != 1
+            ):
                 rm_channels.append(channel)
-            elif np.all(op_hadron_counts!=1):
+            elif np.all(op_hadron_counts != 1):
                 # rm_channels.append(channel)
                 self.rchannels.append(channel)
-            elif np.all(op_hadron_counts==1):
+            elif np.all(op_hadron_counts == 1):
                 if channel not in self.single_hadron_channels:
                     rm_channels.append(channel)
 
             sh_indices = np.where(op_hadron_counts == 1)
-            if len(np.where(op_hadron_counts==1))>0:
+            if len(np.where(op_hadron_counts == 1)) > 0:
                 self.single_hadron_indices_per_channel[channel] = sh_indices[0].tolist()
-                
 
-        #remove undesired or unqualified channels
+        # remove undesired or unqualified channels
         self.project_handler.remove_averaged_data_channels(rm_channels)
-        self.achannels = list(set(self.achannels)-set(rm_channels))
+        self.achannels = list(set(self.achannels) - set(rm_channels))
 
-
-
-        #remove single operator channels that were just added to "rotated" channels in if not desired.
-        final_channels = sigmond_util.filter_channels( task_configs, self.rchannels)
-        remove_channels = list(set(self.rchannels)-set(final_channels))
+        # remove single operator channels that were just added to "rotated" channels in if not desired.
+        final_channels = sigmond_util.filter_channels(task_configs, self.rchannels)
+        remove_channels = list(set(self.rchannels) - set(final_channels))
         self.project_handler.remove_averaged_data_channels(remove_channels)
         self.rchannels = final_channels
 
-        #log final channel set
-        task_configs['fitted_channels'] = []
-        for channel in self.achannels+self.rchannels:
-            task_configs['fitted_channels'].append(str(channel))
+        # log final channel set
+        task_configs["fitted_channels"] = []
+        for channel in self.achannels + self.rchannels:
+            task_configs["fitted_channels"].append(str(channel))
 
-        #get data files
+        # get data files
         self.data_files = self.data_handler.averaged_data_files
         self.data_files += self.data_handler.rotated_data_files
 
-        #if no plots requested will not plot
-        if not self.other_params['create_pdfs'] and not self.other_params['create_pickles'] and not self.other_params['create_summary']:
-            self.other_params['plot'] = False
+        # if no plots requested will not plot
+        if (
+            not self.other_params["create_pdfs"]
+            and not self.other_params["create_pickles"]
+            and not self.other_params["create_summary"]
+        ):
+            self.other_params["plot"] = False
 
         # print(self.ensemble_info.getLatticeXExtent())
-        
-        #make yaml output
-        run_tag = self.other_params.get('run_tag', '')
+
+        # make yaml output
+        run_tag = self.other_params.get("run_tag", "")
         full_input_filepath = proj_files_handler.full_input_file(run_tag)
         logging.info(f"Full input written to '{full_input_filepath}'.")
-        with open(full_input_filepath, 'w+') as log_file:
-            yaml.dump({"general":general_configs, task_name: task_configs}, log_file)
+        with open(full_input_filepath, "w+") as log_file:
+            yaml.dump({"general": general_configs, task_name: task_configs}, log_file)
 
-    def run( self ):
-        #get sigmond memory handler
-        self.mcobs_handler, self.mcobs_get_handler = sigmond_util.get_mcobs_handlers(self.data_handler,self.project_handler.project_info)
-        
-        #set correlated or uncorrelated fits
-        if self.other_params['correlated']:
+    def run(self):
+        # get sigmond memory handler
+        self.mcobs_handler, self.mcobs_get_handler = sigmond_util.get_mcobs_handlers(
+            self.data_handler, self.project_handler.project_info
+        )
+
+        # set correlated or uncorrelated fits
+        if self.other_params["correlated"]:
             self.mcobs_handler.setToCorrelated()
         else:
             self.mcobs_handler.setToUnCorrelated()
 
-        #single hadron fits, write results to hdf5 as we go
+        # single hadron fits, write results to hdf5 as we go
         self.single_hadron_results = {}
         self.single_hadron_info = {}
         single_hadron_operators = {}
@@ -565,22 +707,27 @@ class SigmondSpectrumFits:
         self.tmax_results = {}
         file_created = False
         sh_levels_written = False
-        with h5py.File(self.spectrum_levels_file(),'w') as final_levels:
-            sh_levels = final_levels.create_group('single_hadrons')
-            for channel in self.single_hadron_channels: #achannels+self.rchannels:
+        with h5py.File(self.spectrum_levels_file(), "w") as final_levels:
+            sh_levels = final_levels.create_group("single_hadrons")
+            for channel in self.single_hadron_channels:  # achannels+self.rchannels:
                 self.single_hadron_results[channel] = {}
                 self.tmin_results[channel] = {}
                 self.tmax_results[channel] = {}
                 channel_ops = self.data_handler.getChannelOperators(channel)
                 try:
-                    sh_channel_ops = [channel_ops[index] for index in self.single_hadron_indices_per_channel[channel]]
+                    sh_channel_ops = [
+                        channel_ops[index]
+                        for index in self.single_hadron_indices_per_channel[channel]
+                    ]
                 except KeyError:
-                    logging.critical(f"Channel '{str(channel)}' in single hadrons not found in data handler.")
+                    logging.critical(
+                        f"Channel '{str(channel)}' in single hadrons not found in data handler."
+                    )
 
-                mom = channel.psq #instead of list index, use the channel mom^2
+                mom = channel.psq  # instead of list index, use the channel mom^2
                 # if mom==0:
                 logging.info(f"Fitting channel '{str(channel)}'...")
-                for i,op in enumerate(sh_channel_ops):
+                for i, op in enumerate(sh_channel_ops):
 
                     if op.operator_info.isBasicLapH():
                         hadrons = op.operator_info.getBasicLapH().getNumberOfHadrons()
@@ -592,21 +739,29 @@ class SigmondSpectrumFits:
                     hadron_string = f"{single_hadron}({mom})"
 
                     # don't fit duplicates or sh's not in list
-                    if hadron_string in self.single_hadron_info or single_hadron is None:
+                    if (
+                        hadron_string in self.single_hadron_info
+                        or single_hadron is None
+                    ):
                         continue
 
-
-                    #set up single hadron fit
+                    # set up single hadron fit
                     if file_created:
                         wmode = sigmond.WriteMode.Update
                     else:
                         wmode = sigmond.WriteMode.Overwrite
 
+                    scattering_particle_key = sigmond_info.ScatteringParticle.create(
+                        hadron_string
+                    )
+                    single_hadron_operators[
+                        sigmond_info.ScatteringParticle.create(hadron_string)
+                    ] = operator.Operator(
+                        self.other_params["single_hadrons"][single_hadron][
+                            sh_list_index
+                        ]
+                    )
 
-                    if single_hadron in self.other_params['single_hadrons_ratio']:
-                        single_hadron_operators[sigmond_info.ScatteringParticle.create(hadron_string)] = operator.Operator(self.other_params['single_hadrons_ratio'][single_hadron][sh_list_index])
-                    else:
-                        single_hadron_operators[sigmond_info.ScatteringParticle.create(hadron_string)] = operator.Operator(self.other_params['single_hadrons'][single_hadron][sh_list_index])
                     self.single_hadron_info[hadron_string] = {}
                     self.single_hadron_info[hadron_string]["mom"] = mom
 
@@ -616,161 +771,275 @@ class SigmondSpectrumFits:
                         this_fit_input = dict(self.default_noninteracting_corr_fit)
                     else:
                         this_fit_input = dict(self.default_corr_fit)
-                    if str(op) in self.other_params['correlator_fits']:
-                        for param, setting in self.other_params['correlator_fits'][str(op)].items():
+                    if str(op) in self.other_params["correlator_fits"]:
+                        for param, setting in self.other_params["correlator_fits"][
+                            str(op)
+                        ].items():
                             this_fit_input[param] = setting
-                        if 'model' in self.other_params['correlator_fits'][str(op)]:
-                            this_fit_input['model'] = fit_info.FitModel(this_fit_input['model'])
+                        if "model" in self.other_params["correlator_fits"][str(op)]:
+                            this_fit_input["model"] = fit_info.FitModel(
+                                this_fit_input["model"]
+                            )
 
                     file = self.single_hadron_fit_params_file(repr(channel))
-                    #do the fit, results stored in self.single_hadron_results and self.tmin_results
-                    self.single_hadron_info[hadron_string]["energy_obs"], self.single_hadron_info[hadron_string]["amp_obs"] = self.do_fits( self.single_hadron_results, channel, op,
-                                                                                                                                        this_fit_input, wmode, file, hadrons, self.tmin_results,
-                                                                                                                                        self.tmax_results)
+                    # do the fit, results stored in self.single_hadron_results and self.tmin_results
+                    (
+                        self.single_hadron_info[hadron_string]["energy_obs"],
+                        self.single_hadron_info[hadron_string]["amp_obs"],
+                    ) = self.do_fits(
+                        self.single_hadron_results,
+                        channel,
+                        op,
+                        this_fit_input,
+                        wmode,
+                        file,
+                        hadrons,
+                        self.tmin_results,
+                        self.tmax_results,
+                    )
                     file_created = True
 
-                    #record important info
+                    # record important info
                     if self.single_hadron_results[channel][op]["success"]:
-                        self.single_hadron_info[hadron_string]["ecm"] = self.single_hadron_results[channel][op]["ecm"].getFullEstimate()
-                        self.single_hadron_info[hadron_string]["ecm_ref"] = self.single_hadron_results[channel][op]["ecm"].getFullEstimate()
+                        self.single_hadron_info[hadron_string]["ecm"] = (
+                            self.single_hadron_results[channel][op][
+                                "ecm"
+                            ].getFullEstimate()
+                        )
+                        self.single_hadron_info[hadron_string]["ecm_ref"] = (
+                            self.single_hadron_results[channel][op][
+                                "ecm"
+                            ].getFullEstimate()
+                        )
 
-                        #if successful fit, add to hdf5
-                        samplings = self.mcobs_handler.getFullAndSamplingValues(self.single_hadron_info[hadron_string]["energy_obs"],
-                                                                        self.project_handler.project_info.sampling_info.getSamplingMode())
-                        sh_levels.create_dataset(hadron_string,data=np.array(samplings.array()))
+                        # if successful fit, add to hdf5
+                        samplings = self.mcobs_handler.getFullAndSamplingValues(
+                            self.single_hadron_info[hadron_string]["energy_obs"],
+                            self.project_handler.project_info.sampling_info.getSamplingMode(),
+                        )
+                        sh_levels.create_dataset(
+                            hadron_string, data=np.array(samplings.array())
+                        )
                         sh_levels_written = True
 
-        logging.info(f"Fit parameters written to {self.single_hadron_fit_params_file()}.")
+        logging.info(
+            f"Fit parameters written to {self.single_hadron_fit_params_file()}."
+        )
         if sh_levels_written:
-            logging.info(f"Single hadron masses written to {self.spectrum_levels_file()}.")
-            
-            
-        
+            logging.info(
+                f"Single hadron masses written to {self.spectrum_levels_file()}."
+            )
+
         while True:
-            
-            #spectrum fits
+
+            # spectrum fits
             self.interacting_channels = []
-            if self.other_params['do_interacting_fits']:
+            if self.other_params["do_interacting_fits"]:
                 # threads = []
                 # thread_index = 0
                 file_created = False
                 logging.info(f"Fitting spectrum...")
                 for channel in self.rchannels:
                     self.results[channel] = {}
-                    operators = self.data_handler.getChannelOperators2(channel) #collects rotated operators first
-                    #determine if its a good channel
+                    operators = self.data_handler.getChannelOperators2(
+                        channel
+                    )  # collects rotated operators first
+                    # determine if its a good channel
                     if len(operators):
                         op = operators[0]
                         if op.operator_info.isBasicLapH():
-                            hadrons = op.operator_info.getBasicLapH().getNumberOfHadrons()
+                            hadrons = (
+                                op.operator_info.getBasicLapH().getNumberOfHadrons()
+                            )
                         else:
                             opname = op.operator_info.getGenIrrep().getIDName()
                             if "ROT" in opname:
-                                hadrons=2
+                                hadrons = 2
                             else:
-                                hadrons = count_hadrons(opname) #make table of all single hadrons? or use parenthesis or dashes
+                                hadrons = count_hadrons(
+                                    opname
+                                )  # make table of all single hadrons? or use parenthesis or dashes
 
-                        if len(operators)==1:
+                        if len(operators) == 1:
                             intop = op
                         else:
-                            intop = operator.Operator( channel.getRotatedOp(0) )
+                            intop = operator.Operator(channel.getRotatedOp(0))
 
                         single_hadron, _ = self.get_single_hadron(str(intop))
-                        if (not single_hadron and hadrons>=2) or (not single_hadron and len(operators)>=2):
+                        if (not single_hadron and hadrons >= 2) or (
+                            not single_hadron and len(operators) >= 2
+                        ):
                             if channel not in self.tmin_results.keys():
                                 self.tmin_results[channel] = {}
                             if channel not in self.tmax_results.keys():
                                 self.tmax_results[channel] = {}
                             self.interacting_channels.append(channel)
-                            
-                            bool_list = [self.other_params['non_interacting_levels'].get(str(channel), {}) == {},
-                                         self.other_params['use_overlaps_for_ratio']]
+
+                            bool_list = [
+                                self.other_params["non_interacting_levels"].get(
+                                    str(channel), {}
+                                )
+                                == {},
+                                self.other_params["use_overlaps_for_ratio"],
+                            ]
                             if all(bool_list):
                                 # Generate dummy non-interacting levels for ratio fits. Just assign in order
                                 # get pivoter
                                 pivoter = self.get_pivoter(channel)
                                 ops = pivoter.getOperatorsPython()
-                                self.other_params['non_interacting_levels'][str(channel)] = [get_hadrons(get_op_name(op)) for op in ops]
-                                
-                                    
-                            
-                            logging.info(f"Fitting channel '{str(channel)}'...")
-                            for i,op in enumerate(operators):
+                                self.other_params["non_interacting_levels"][
+                                    str(channel)
+                                ] = [get_hadrons(get_op_name(op)) for op in ops]
 
-                                #set up fit
+                            logging.info(f"Fitting channel '{str(channel)}'...")
+                            for i, op in enumerate(operators):
+
+                                # set up fit
                                 if file_created:
                                     wmode = sigmond.WriteMode.Update
                                 else:
                                     wmode = sigmond.WriteMode.Overwrite
 
-                                if len(operators)==1:
+                                if len(operators) == 1:
                                     intop = op
                                 else:
-                                    intop = operator.Operator( channel.getRotatedOp(i) )
+                                    intop = operator.Operator(channel.getRotatedOp(i))
                                 logging.info(f"\tFitting operator '{str(intop)}'...")
 
                                 if self.default_interacting_corr_fit:
-                                    this_fit_input = dict(self.default_interacting_corr_fit)
+                                    this_fit_input = dict(
+                                        self.default_interacting_corr_fit
+                                    )
                                 else:
                                     this_fit_input = dict(self.default_corr_fit)
 
-                                if str(intop) in self.other_params['correlator_fits']:
-                                    for param, setting in self.other_params['correlator_fits'][str(intop)].items():
+                                if str(intop) in self.other_params["correlator_fits"]:
+                                    for param, setting in self.other_params[
+                                        "correlator_fits"
+                                    ][str(intop)].items():
                                         this_fit_input[param] = setting
 
-                                #set up ratio fits   
-                                if str(channel) in self.other_params['non_interacting_levels']:
-                                    if len(self.other_params['non_interacting_levels'][str(channel)])<i:
-                                        logging.warning(f"Non enough non-interacting levels defined for channel {str(channel)}.")
+                                # set up ratio fits
+                                if (
+                                    str(channel)
+                                    in self.other_params["non_interacting_levels"]
+                                ):
+                                    if (
+                                        len(
+                                            self.other_params["non_interacting_levels"][
+                                                str(channel)
+                                            ]
+                                        )
+                                        < i
+                                    ):
+                                        logging.warning(
+                                            f"Non enough non-interacting levels defined for channel {str(channel)}."
+                                        )
                                         continue
-                                    non_interacting_level = self.other_params['non_interacting_levels'][str(channel)][i]
+                                    non_interacting_level = self.other_params[
+                                        "non_interacting_levels"
+                                    ][str(channel)][i]
                                 else:
                                     non_interacting_level = None
 
                                 if non_interacting_level:
                                     try:
-                                        non_interacting_ops = sigmond_info.NonInteractingOperators.create(single_hadron_operators,non_interacting_level)
-                                        this_fit_input["non_interacting_operators"] = non_interacting_ops
+                                        non_interacting_ops = (
+                                            sigmond_info.NonInteractingOperators.create(
+                                                single_hadron_operators,
+                                                non_interacting_level,
+                                            )
+                                        )
+                                        this_fit_input["non_interacting_operators"] = (
+                                            non_interacting_ops
+                                        )
 
-                                        #add as ability of choosing between direct fits or ground state for NI level shift calculation
-                                        non_interacting_level = [(self.single_hadron_info[particle.replace(str(self.single_hadron_info[particle]["mom"]),'0')]["energy_obs"],self.single_hadron_info[particle]["mom"]) for particle in non_interacting_level]
-                                        this_fit_input["non_interacting_level"] = non_interacting_level
+                                        non_interacting_level = [
+                                            (
+                                                self.single_hadron_info[
+                                                    particle.replace(
+                                                        str(
+                                                            self.single_hadron_info[
+                                                                particle
+                                                            ]["mom"]
+                                                        ),
+                                                        "0",
+                                                    )
+                                                ]["energy_obs"],
+                                                self.single_hadron_info[particle][
+                                                    "mom"
+                                                ],
+                                            )
+                                            for particle in non_interacting_level
+                                        ]
+                                        this_fit_input["non_interacting_level"] = (
+                                            non_interacting_level
+                                        )
                                     except RuntimeError as err:
                                         continue
 
                                 file = self.spectrum_fit_params_file(channel)
-                                self.do_fits( self.results, channel, intop, this_fit_input, wmode, file, hadrons, self.tmin_results, self.tmax_results)
+                                self.do_fits(
+                                    self.results,
+                                    channel,
+                                    intop,
+                                    this_fit_input,
+                                    wmode,
+                                    file,
+                                    hadrons,
+                                    self.tmin_results,
+                                    self.tmax_results,
+                                )
                                 if self.results[channel][intop]["success"]:
                                     file_created = True
 
-                logging.info(f"All fit parameters written to {self.spectrum_fit_params_file()}.")
-                logging.info(f"Log files written to {self.proj_files_handler.log_dir('fit_logs')}.")
+                logging.info(
+                    f"All fit parameters written to {self.spectrum_fit_params_file()}."
+                )
+                logging.info(
+                    f"Log files written to {self.proj_files_handler.log_dir('fit_logs')}."
+                )
 
-            #divide single hadron ecm by ref for plotting info
-            if f"{self.other_params['reference_particle']}(0)" in self.single_hadron_info:
-                ref_ecm_obs = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["energy_obs"]
+            # divide single hadron ecm by ref for plotting info
+            if (
+                f"{self.other_params['reference_particle']}(0)"
+                in self.single_hadron_info
+            ):
+                ref_ecm_obs = self.single_hadron_info[
+                    f"{self.other_params['reference_particle']}(0)"
+                ]["energy_obs"]
                 for particle in self.single_hadron_info:
                     if "ecm_ref" in self.single_hadron_info[particle]:
                         # Create a new MCObsInfo for the ratio
                         ecm_ref_obs = sigmond.MCObsInfo(f"{particle}_ecm_ref", 0)
                         # Use proper ratio sampling instead of simple division
-                        sigmond.doRatioBySamplings(self.mcobs_handler, 
-                                            self.single_hadron_info[particle]["energy_obs"], 
-                                            ref_ecm_obs, 
-                                            ecm_ref_obs)
+                        sigmond.doRatioBySamplings(
+                            self.mcobs_handler,
+                            self.single_hadron_info[particle]["energy_obs"],
+                            ref_ecm_obs,
+                            ecm_ref_obs,
+                        )
                         # Store the properly calculated ratio
-                        self.single_hadron_info[particle]["ecm_ref"] = self.mcobs_handler.getEstimate(ecm_ref_obs).getFullEstimate()
+                        self.single_hadron_info[particle]["ecm_ref"] = (
+                            self.mcobs_handler.getEstimate(
+                                ecm_ref_obs
+                            ).getFullEstimate()
+                        )
 
-            #compute overlaps
-            if self.other_params['do_interacting_fits'] or self.interacting_channels:
+            # compute overlaps
+            if self.other_params["do_interacting_fits"] or self.interacting_channels:
                 self.zmags = {}
                 self.assignment_certainty = {}
                 if self.other_params["compute_overlaps"]:
                     logging.info(f"Computing overlaps...")
                     any_success = False
-                    pivot_type = sigmond_util.get_pivot_type(self.other_params["pivot_file"])
-                    if pivot_type==None:
-                        logging.warning("Given file for pivot is not a pivot type. Skipping operator overlap calculation")
+                    pivot_type = sigmond_util.get_pivot_type(
+                        self.other_params["pivot_file"]
+                    )
+                    if pivot_type == None:
+                        logging.warning(
+                            "Given file for pivot is not a pivot type. Skipping operator overlap calculation"
+                        )
                         self.other_params["compute_overlaps"] = False
 
                     if self.other_params["compute_overlaps"]:
@@ -779,15 +1048,17 @@ class SigmondSpectrumFits:
                         file_created = False
                         for channel in tqdm.tqdm(self.interacting_channels):
                             success = False
-                            if len(self.results[channel])>=2:
+                            if len(self.results[channel]) >= 2:
                                 for op in self.results[channel]:
                                     success = self.results[channel][op]["success"]
                                     if not success:
                                         break
                             if not success:
-                                logging.warning(f"Not enough fits in channel {channel}; cannot compute overlaps.")
+                                logging.warning(
+                                    f"Not enough fits in channel {channel}; cannot compute overlaps."
+                                )
                                 continue
-                            
+
                             any_success = True
                             if file_created:
                                 wmode = sigmond.WriteMode.Update
@@ -796,13 +1067,22 @@ class SigmondSpectrumFits:
 
                             self.zmags[channel] = {}
                             self.assignment_certainty[channel] = []
-                            pivoter = sigmond_util.setup_pivoter(pivot_type, self.other_params["pivot_file"], channel, self.mcobs_handler)
+                            pivoter = sigmond_util.setup_pivoter(
+                                pivot_type,
+                                self.other_params["pivot_file"],
+                                channel,
+                                self.mcobs_handler,
+                            )
 
-                            #give the pivoter the fit information
+                            # give the pivoter the fit information
                             for op in self.results[channel]:
                                 this_fit_info = self.results[channel][op]["info"]
-                                elab_obs_info = this_fit_info.fit_param_obs(this_fit_info.num_params+Obs.elab.value)
-                                amp_obs_info = this_fit_info.fit_param_obs(this_fit_info.num_params+Obs.amp.value)
+                                elab_obs_info = this_fit_info.fit_param_obs(
+                                    this_fit_info.num_params + Obs.elab.value
+                                )
+                                amp_obs_info = this_fit_info.fit_param_obs(
+                                    this_fit_info.num_params + Obs.amp.value
+                                )
                                 pivoter.insertEnergyFitInfo(op.level, elab_obs_info)
                                 pivoter.insertAmplitudeFitInfo(op.level, amp_obs_info)
 
@@ -811,7 +1091,12 @@ class SigmondSpectrumFits:
                                 loghelper = sigmond.LogHelper()
                                 pivoter.reorderLevelsByFitEnergy(loghelper)
 
-                            zmags = pivoter.computeZMagnitudesSquaredPython(self.operator_overlaps_samplings(repr(channel)),wmode,'H',f"{repr(channel)}-")
+                            zmags = pivoter.computeZMagnitudesSquaredPython(
+                                self.operator_overlaps_samplings(repr(channel)),
+                                wmode,
+                                "H",
+                                f"{repr(channel)}-",
+                            )
                             self.zmags[channel]["ops"] = pivoter.getOperatorsPython()
                             self.zmags[channel]["nlevels"] = pivoter.getNumberOfLevels()
                             self.zmags[channel]["zmags"] = zmags
@@ -820,93 +1105,136 @@ class SigmondSpectrumFits:
                             # get assignment certainty/confidence
                             # single hadrons in rotated matrix? Drop assignment certainty plot and graph
                             # since 'random' NI's are likely located in 'non_interacting_levels' for these problematic ops
-                            ni_op_strs_from_pivot = [get_hadrons(get_op_name(op)) for op in self.zmags[channel]["ops"]]
+                            ni_op_strs_from_pivot = [
+                                get_hadrons(get_op_name(op))
+                                for op in self.zmags[channel]["ops"]
+                            ]
 
                             # Proceed with certainty calculation as long as at least one operator corresponds
                             # to a genuine NI pair (length ≥ 2).  Single–hadron operators are simply ignored.
-                            has_pair_op = any(len(ops) >= 2 for ops in ni_op_strs_from_pivot)
+                            has_pair_op = any(
+                                len(ops) >= 2 for ops in ni_op_strs_from_pivot
+                            )
 
                             if not has_pair_op:
                                 # Nothing meaningful to compare – skip quietly
                                 self.assignment_certainty[channel] = None
                                 continue
 
-                            if self.other_params['non_interacting_levels'].get(str(channel), {}) == {}:
+                            if (
+                                self.other_params["non_interacting_levels"].get(
+                                    str(channel), {}
+                                )
+                                == {}
+                            ):
                                 continue
 
                             # create normalized z_matrix
                             z_mat = sigmond_util.construct_Z_matrix(self.zmags[channel])
-                            normalized_z_mat = sigmond_util.calculate_normalized_Z_matrix(z_mat)
-                            # get assignment certainty
-                            self.assignment_certainty[channel] = sigmond_util.calculate_certainty_metrics(
-                                normalized_z_mat,
-                                self.other_params['non_interacting_levels'][str(channel)],
-                                [get_hadrons(get_op_name(op)) for op in self.zmags[channel]["ops"]]
+                            normalized_z_mat = (
+                                sigmond_util.calculate_normalized_Z_matrix(z_mat)
                             )
-                            
-                        if any_success:   
-                            logging.info(f"Operator overlaps written to {self.operator_overlaps_samplings()}.")
+                            # get assignment certainty
+                            self.assignment_certainty[channel] = (
+                                sigmond_util.calculate_certainty_metrics(
+                                    normalized_z_mat,
+                                    self.other_params["non_interacting_levels"][
+                                        str(channel)
+                                    ],
+                                    [
+                                        get_hadrons(get_op_name(op))
+                                        for op in self.zmags[channel]["ops"]
+                                    ],
+                                )
+                            )
+
+                        if any_success:
+                            logging.info(
+                                f"Operator overlaps written to {self.operator_overlaps_samplings()}."
+                            )
                         else:
                             self.other_params["compute_overlaps"] = False
 
-            #get optimized non-interacting levels for each channel
-            if_bool_list = [self.other_params['do_interacting_fits'], self.other_params['use_overlaps_for_ratio']]
+            # get optimized non-interacting levels for each channel
+            if_bool_list = [
+                self.other_params["do_interacting_fits"],
+                self.other_params["use_overlaps_for_ratio"],
+            ]
             if all(if_bool_list):
                 logging.info("Optimizing non-interacting levels...")
                 optimize_success = []
                 for channel in self.interacting_channels:
                     if channel in self.zmags:
-                        ni_levels = sigmond_util.optimal_per_operator_normalized_assignment(self.zmags[channel], 
-                                                                                            self.single_hadron_info, 
-                                                                                            get_hadrons)
-                        self.other_params['non_interacting_levels'][str(channel)] = ni_levels
+                        ni_levels = (
+                            sigmond_util.optimal_per_operator_normalized_assignment(
+                                self.zmags[channel],
+                                self.single_hadron_info,
+                                get_hadrons,
+                            )
+                        )
+                        self.other_params["non_interacting_levels"][
+                            str(channel)
+                        ] = ni_levels
                         optimize_success.append(True)
                     else:
-                        logging.warning(f"No operator overlaps found for channel {channel}. Skipping optimization.")
+                        logging.warning(
+                            f"No operator overlaps found for channel {channel}. Skipping optimization."
+                        )
                         optimize_success.append(False)
                         break
                 if all(optimize_success):
                     logging.info("Non-interacing levels optimization successful.")
-                    #output this ni configuration in input yml for use in later fits and add to non-interacting levels in task config file
-                    self.other_params['use_overlaps_for_ratio'] = False
-                    
-                    non_interacting_levels = self.other_params['non_interacting_levels']
+                    # output this ni configuration in input yml for use in later fits and add to non-interacting levels in task config file
+                    self.other_params["use_overlaps_for_ratio"] = False
+
+                    non_interacting_levels = self.other_params["non_interacting_levels"]
                     formatted_levels = {}
                     for key, value in non_interacting_levels.items():
-                        formatted_levels[key] = [[str(x) for x in pair] for pair in value]
-                        
+                        formatted_levels[key] = [
+                            [str(x) for x in pair] for pair in value
+                        ]
+
                     log_dir = self.proj_files_handler.log_dir()
                     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                     log_filename = f"optimized_non_interacting_levels_{timestamp}.yml"
                     log_filepath = os.path.join(log_dir, log_filename)
-                    
-                    with open(log_filepath, 'w') as log_file:
+
+                    with open(log_filepath, "w") as log_file:
                         yaml.dump(
-                            {self.task_name: {"non_interacting_levels": formatted_levels}},
+                            {
+                                self.task_name: {
+                                    "non_interacting_levels": formatted_levels
+                                }
+                            },
                             log_file,
                             Dumper=sigmond_util.CompactListDumper,
                             default_flow_style=True,  # Still hierarchical but enforces compact lists
-                            sort_keys=False  # Preserve key order
+                            sort_keys=False,  # Preserve key order
                         )
 
                     logging.info(f"New log file created: {log_filepath}")
-                
-                    continue # loop back around and do the ratio fits. have it output this ni configuration in yml for use in later fits
+
+                    continue  # loop back around and do the ratio fits. have it output this ni configuration in yml for use in later fits
             break
 
-                    
-        #add to spectrum level with single hadron levels in the spectrum hdf5, delete interacting samplings after finish
+        # add to spectrum level with single hadron levels in the spectrum hdf5, delete interacting samplings after finish
         logging.info("Writing spectrum level samplings to file...")
 
         wmode = sigmond.WriteMode.Overwrite
-        with h5py.File(self.spectrum_levels_file(False),'a') as final_levels:
-            if self.other_params['reference_particle']:
-                ref_obs = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["energy_obs"]
-                ref_channel =  operator.Operator(self.other_params['single_hadrons'][self.other_params['reference_particle']][0]).channel
+        with h5py.File(self.spectrum_levels_file(False), "a") as final_levels:
+            if self.other_params["reference_particle"]:
+                ref_obs = self.single_hadron_info[
+                    f"{self.other_params['reference_particle']}(0)"
+                ]["energy_obs"]
+                ref_channel = operator.Operator(
+                    self.other_params["single_hadrons"][
+                        self.other_params["reference_particle"]
+                    ][0]
+                ).channel
             for channel in tqdm.tqdm(self.results):
                 if self.results[channel]:
                     strangeness = channel.strangeness
-                    if strangeness<0:
+                    if strangeness < 0:
                         strange_key = f"m{-strangeness}"
                     else:
                         strange_key = strangeness
@@ -917,12 +1245,12 @@ class SigmondSpectrumFits:
                         particle_group = final_levels.create_group(particle_str)
 
                     mom = channel.mom_str
-                    #check if mom_group exists
+                    # check if mom_group exists
                     if mom in particle_group.keys():
                         mom_group = particle_group[mom]
                     else:
                         mom_group = particle_group.create_group(mom)
-                    irrep_group =  mom_group.create_group(channel.irrep)
+                    irrep_group = mom_group.create_group(channel.irrep)
                     level_ordering = []
                     complete_basis = True
                     for op in self.results[channel]:
@@ -930,48 +1258,68 @@ class SigmondSpectrumFits:
                             this_fit_info = self.results[channel][op]["info"]
 
                             # get the avaliable energies
-                            energy_tags = ['ecm', 'elab']
+                            energy_tags = ["ecm", "elab"]
                             energy_ref_tags = []
                             if "dElab" in self.results[channel][op]:
-                                energy_tags.append('dElab')
-                            if self.other_params['reference_particle']:
+                                energy_tags.append("dElab")
+                            if self.other_params["reference_particle"]:
                                 for tag in energy_tags:
-                                    energy_ref_tags.append(tag+"_ref")
+                                    energy_ref_tags.append(tag + "_ref")
                                 energy_tags += energy_ref_tags
 
-                            get_MCObsInfo = lambda obs_tag: sigmond.MCObsInfo(this_fit_info.obs_name, this_fit_info.obs_id(this_fit_info.num_params+Obs[obs_tag].value))
+                            get_MCObsInfo = lambda obs_tag: sigmond.MCObsInfo(
+                                this_fit_info.obs_name,
+                                this_fit_info.obs_id(
+                                    this_fit_info.num_params + Obs[obs_tag].value
+                                ),
+                            )
 
-                            energy_obs_infos = {tag: get_MCObsInfo(tag) for tag in energy_tags}
+                            energy_obs_infos = {
+                                tag: get_MCObsInfo(tag) for tag in energy_tags
+                            }
 
                             if channel.psq == 0:
                                 # if mom is 0, then set ecm info with elab
-                                energy_obs_infos['ecm'] = energy_obs_infos['elab']
-                                if 'elab_ref' in energy_obs_infos:
-                                    energy_obs_infos['ecm_ref'] = energy_obs_infos['elab_ref']
+                                energy_obs_infos["ecm"] = energy_obs_infos["elab"]
+                                if "elab_ref" in energy_obs_infos:
+                                    energy_obs_infos["ecm_ref"] = energy_obs_infos[
+                                        "elab_ref"
+                                    ]
 
-
-                            if self.mcobs_handler.queryFullAndSamplings(energy_obs_infos['elab']):
+                            if self.mcobs_handler.queryFullAndSamplings(
+                                energy_obs_infos["elab"]
+                            ):
                                 self.mcobs_handler.setSamplingBegin()
                                 this_level = {
                                     "rotate_level": op.level,
-                                    "ecm value": self.mcobs_handler.getCurrentSamplingValue(energy_obs_infos['elab']),
-                                    "elab": energy_obs_infos['elab']
+                                    "ecm value": self.mcobs_handler.getCurrentSamplingValue(
+                                        energy_obs_infos["elab"]
+                                    ),
+                                    "elab": energy_obs_infos["elab"],
                                 }
 
                                 for tag, obs_info in energy_obs_infos.items():
-                                    if 'ref' in tag:
-                                        no_ref_tag = tag.replace('_ref','')
+                                    if "ref" in tag:
+                                        no_ref_tag = tag.replace("_ref", "")
                                         try:
-                                            sigmond.doRatioBySamplings(self.mcobs_handler, energy_obs_infos[no_ref_tag], ref_obs,
-                                                                   obs_info)
+                                            sigmond.doRatioBySamplings(
+                                                self.mcobs_handler,
+                                                energy_obs_infos[no_ref_tag],
+                                                ref_obs,
+                                                obs_info,
+                                            )
                                         except RuntimeError as e:
-                                            logging.warning(f"Error in ratio calculation for {tag}, operator {op}, in channel {channel}: {e}")
+                                            logging.warning(
+                                                f"Error in ratio calculation for {tag}, operator {op}, in channel {channel}: {e}"
+                                            )
                                             complete_basis = False
                                             continue
 
                                     this_level[tag] = obs_info
                                     if tag not in self.results[channel][op]:
-                                        self.results[channel][op][tag] = self.mcobs_handler.getEstimate(obs_info)
+                                        self.results[channel][op][tag] = (
+                                            self.mcobs_handler.getEstimate(obs_info)
+                                        )
 
                                 level_ordering.append(this_level)
 
@@ -991,114 +1339,169 @@ class SigmondSpectrumFits:
                         current_level_mcobs_infos_sorted = {}
                         for energy in Obs.energy_observables():
                             if energy in level:
-                                samplings = self.mcobs_handler.getFullAndSamplingValues(level[energy],
-                                                self.project_handler.project_info.sampling_info.getSamplingMode())
+                                samplings = self.mcobs_handler.getFullAndSamplingValues(
+                                    level[energy],
+                                    self.project_handler.project_info.sampling_info.getSamplingMode(),
+                                )
 
                                 if complete_basis:
                                     energy_index = i
                                 else:
-                                    energy_index = level['rotate_level']
-                                if '_ref' in energy:
+                                    energy_index = level["rotate_level"]
+                                if "_ref" in energy:
                                     energy_name = f"{energy.replace('_ref','')}_{energy_index}_ref"
                                 else:
                                     energy_name = f"{energy}_{energy_index}"
-                                irrep_group.create_dataset(energy_name,data=np.array(samplings.array()))
+                                irrep_group.create_dataset(
+                                    energy_name, data=np.array(samplings.array())
+                                )
 
-                                sigmond_obs_name = str(channel).replace(' ', '_') + f"_{energy_name}"
+                                sigmond_obs_name = (
+                                    str(channel).replace(" ", "_") + f"_{energy_name}"
+                                )
 
                                 new_mcobs_info = sigmond.MCObsInfo(sigmond_obs_name, 0)
-                                
-                                # Copy the sampling data to the new observable name
-                                sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler, [level[energy]], [1.0], new_mcobs_info)
 
-                                current_level_mcobs_infos_sorted[sigmond_obs_name] = new_mcobs_info
+                                # Copy the sampling data to the new observable name
+                                sigmond.doLinearSuperpositionBySamplings(
+                                    self.mcobs_handler,
+                                    [level[energy]],
+                                    [1.0],
+                                    new_mcobs_info,
+                                )
+
+                                current_level_mcobs_infos_sorted[sigmond_obs_name] = (
+                                    new_mcobs_info
+                                )
 
                         dummy = sigmond.XMLHandler("test")
                         mcobs_infos_in = set(current_level_mcobs_infos_sorted.values())
 
-                        self.mcobs_handler.writeSamplingValuesToFile(mcobs_infos_in, self.spectrum_levels_sigmond_file('samplings'), dummy, wmode, "H")
-                        
+                        self.mcobs_handler.writeSamplingValuesToFile(
+                            mcobs_infos_in,
+                            self.spectrum_levels_sigmond_file("samplings"),
+                            dummy,
+                            wmode,
+                            "H",
+                        )
+
                         # after first write, set wmode to update
                         if wmode == sigmond.WriteMode.Overwrite:
                             wmode = sigmond.WriteMode.Update
 
                         for energy in Obs.energy_observables():
                             if energy in level:
-                                if self.mcobs_handler.queryFullAndSamplings(level[energy]):
-                                    if self.other_params['reference_particle']:
-                                        if ref_channel!=channel:
-                                            self.mcobs_handler.eraseSamplings(level[energy])
+                                if self.mcobs_handler.queryFullAndSamplings(
+                                    level[energy]
+                                ):
+                                    if self.other_params["reference_particle"]:
+                                        if ref_channel != channel:
+                                            self.mcobs_handler.eraseSamplings(
+                                                level[energy]
+                                            )
 
             # divide single hadrons by reference particle, and write reference particle samplings to both files, and
             # ecm values to sigmond file (already previously added to 'final_levels')
-            do_refs = self.other_params['reference_particle'] and \
-                             f"{self.other_params['reference_particle']}(0)" in self.single_hadron_info
+            do_refs = (
+                self.other_params["reference_particle"]
+                and f"{self.other_params['reference_particle']}(0)"
+                in self.single_hadron_info
+            )
             if do_refs:
-                reference_samplings = final_levels['single_hadrons'][f"{self.other_params['reference_particle']}(0)"][()]
-                final_levels['single_hadrons'].create_dataset("ref", data=(reference_samplings))
+                reference_samplings = final_levels["single_hadrons"][
+                    f"{self.other_params['reference_particle']}(0)"
+                ][()]
+                final_levels["single_hadrons"].create_dataset(
+                    "ref", data=(reference_samplings)
+                )
             else:
-                logging.warning(f"Reference particle {self.other_params['reference_particle']}(0) not defined, skipping reference particle samplings.")
+                logging.warning(
+                    f"Reference particle {self.other_params['reference_particle']}(0) not defined, skipping reference particle samplings."
+                )
 
             sh_mcobs_infos = {}
             for particle, particle_info in self.single_hadron_info.items():
-                if particle in final_levels['single_hadrons'].keys(): #should always be, but just in case
+                if (
+                    particle in final_levels["single_hadrons"].keys()
+                ):  # should always be, but just in case
                     # add new obs to sigmond file
-                    sigmond_obs_name = str(particle)+f"_elab"
+                    sigmond_obs_name = str(particle) + f"_elab"
                     new_mcobs_info = sigmond.MCObsInfo(sigmond_obs_name, 0)
-                    
+
                     # Copy the sampling data to the new observable name
-                    sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler, [particle_info["energy_obs"]], [1.0], new_mcobs_info)
-                    
+                    sigmond.doLinearSuperpositionBySamplings(
+                        self.mcobs_handler,
+                        [particle_info["energy_obs"]],
+                        [1.0],
+                        new_mcobs_info,
+                    )
+
                     sh_mcobs_infos[sigmond_obs_name] = new_mcobs_info
 
                     if do_refs:
                         # divide by reference particle, add to pycalq hdf5
-                        samplings = final_levels['single_hadrons'][particle][()]
-                        final_levels['single_hadrons'].create_dataset(particle+"_ref", data=(samplings/reference_samplings))
+                        samplings = final_levels["single_hadrons"][particle][()]
+                        final_levels["single_hadrons"].create_dataset(
+                            particle + "_ref", data=(samplings / reference_samplings)
+                        )
 
                         # divide by reference particle, add to sigmond hdf5
                         sigmond_obs_ref_name = sigmond_obs_name + "_ref"
                         new_mcobs_ref_info = sigmond.MCObsInfo(sigmond_obs_ref_name, 0)
-                        ref_obs = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["energy_obs"]
-                        sigmond.doRatioBySamplings(self.mcobs_handler, particle_info["energy_obs"], ref_obs,
-                                                   new_mcobs_ref_info)
+                        ref_obs = self.single_hadron_info[
+                            f"{self.other_params['reference_particle']}(0)"
+                        ]["energy_obs"]
+                        sigmond.doRatioBySamplings(
+                            self.mcobs_handler,
+                            particle_info["energy_obs"],
+                            ref_obs,
+                            new_mcobs_ref_info,
+                        )
                         sh_mcobs_infos[sigmond_obs_ref_name] = new_mcobs_ref_info
 
             # write all single hadron mcobs infos to sigmond file
             dummy = sigmond.XMLHandler("test")
             sh_mcobs_infos_in = set(sh_mcobs_infos.values())
-            self.mcobs_handler.writeSamplingValuesToFile(sh_mcobs_infos_in, self.spectrum_levels_sigmond_file('samplings'), dummy, wmode, "H")
+            self.mcobs_handler.writeSamplingValuesToFile(
+                sh_mcobs_infos_in,
+                self.spectrum_levels_sigmond_file("samplings"),
+                dummy,
+                wmode,
+                "H",
+            )
 
-        
         if os.path.exists(self.spectrum_levels_file()):
-            logging.info(f"Final level samplings written to {self.spectrum_levels_file()}.")
+            logging.info(
+                f"Final level samplings written to {self.spectrum_levels_file()}."
+            )
 
         if os.path.exists(self.spectrum_levels_sigmond_file()):
-            logging.info(f"Final level samplings written in sigmond_format to {self.spectrum_levels_sigmond_file()}.")
+            logging.info(
+                f"Final level samplings written in sigmond_format to {self.spectrum_levels_sigmond_file()}."
+            )
 
-        if self.other_params['do_interacting_fits'] or self.interacting_channels:
-            #add rotation and ensemble info to all sampling output files
-            print('adding rotation and ensemble info to all sampling output files')
+        if self.other_params["do_interacting_fits"] or self.interacting_channels:
+            # add rotation and ensemble info to all sampling output files
+            print("adding rotation and ensemble info to all sampling output files")
             with h5py.File(self.other_params["pivot_file"]) as pivotfile:
-                rotate_info = pivotfile['Info']['Header'][()]
+                rotate_info = pivotfile["Info"]["Header"][()]
                 if os.path.exists(self.spectrum_fit_params_file()):
-                    with h5py.File(self.spectrum_fit_params_file(), 'r+') as paramsfile:
-                        paramsfile['Info'].create_dataset('Header', data = rotate_info)
+                    with h5py.File(self.spectrum_fit_params_file(), "r+") as paramsfile:
+                        paramsfile["Info"].create_dataset("Header", data=rotate_info)
                 if self.other_params["compute_overlaps"]:
-                    with h5py.File(self.operator_overlaps_samplings(), 'r+') as overlapsfile:
-                        overlapsfile['Info'].create_dataset('Header', data = rotate_info)
+                    with h5py.File(
+                        self.operator_overlaps_samplings(), "r+"
+                    ) as overlapsfile:
+                        overlapsfile["Info"].create_dataset("Header", data=rotate_info)
                 if os.path.exists(self.spectrum_levels_file()):
-                    with h5py.File(self.spectrum_levels_file(), 'r+') as levelsfile:
+                    with h5py.File(self.spectrum_levels_file(), "r+") as levelsfile:
                         # create the Info group
-                        levelsfile.create_group('Info')
+                        levelsfile.create_group("Info")
                         # copy the all contents of the Info group from the pivot file
-                        for key, value in pivotfile['Info'].items():
-                            levelsfile['Info'].create_dataset(key, data = value)
+                        for key, value in pivotfile["Info"].items():
+                            levelsfile["Info"].create_dataset(key, data=value)
 
-                        
-
-
-        #write estimates of both single hadrons and spectrum #separate into different files or specify sh or interacting, occasionally they have the same channel name. 
+        # write estimates of both single hadrons and spectrum #separate into different files or specify sh or interacting, occasionally they have the same channel name.
         if self.other_params["generate_estimates"]:
             logging.info("Writing estimates to file...")
 
@@ -1132,34 +1535,58 @@ class SigmondSpectrumFits:
                             "qual": interact_results[op]["qual"],
                             "dof": interact_results[op]["dof"],
                             "ecm value": interact_results[op]["ecm"].getFullEstimate(),
-                            "ecm error": interact_results[op]["ecm"].getSymmetricError(),
+                            "ecm error": interact_results[op][
+                                "ecm"
+                            ].getSymmetricError(),
                         }
                         if "dElab" in interact_results[op]:
-                            simple_result["dElab value"] = interact_results[op]["dElab"].getFullEstimate()
-                            simple_result["dElab error"] = interact_results[op]["dElab"].getSymmetricError()
-                            simple_result["non-interacting level"] = \
-                            self.other_params['non_interacting_levels'][str(int_channel)][op.level]
+                            simple_result["dElab value"] = interact_results[op][
+                                "dElab"
+                            ].getFullEstimate()
+                            simple_result["dElab error"] = interact_results[op][
+                                "dElab"
+                            ].getSymmetricError()
+                            simple_result["non-interacting level"] = self.other_params[
+                                "non_interacting_levels"
+                            ][str(int_channel)][op.level]
                         if "dElab_ref" in interact_results[op]:
-                            simple_result["dElab_ref value"] = interact_results[op]["dElab_ref"].getFullEstimate()
-                            simple_result["dElab_ref error"] = interact_results[op]["dElab_ref"].getSymmetricError()
+                            simple_result["dElab_ref value"] = interact_results[op][
+                                "dElab_ref"
+                            ].getFullEstimate()
+                            simple_result["dElab_ref error"] = interact_results[op][
+                                "dElab_ref"
+                            ].getSymmetricError()
                         if "ecm_ref" in interact_results[op]:
-                            simple_result["ecm_ref value"] = interact_results[op]["ecm_ref"].getFullEstimate()
-                            simple_result["ecm_ref error"] = interact_results[op]["ecm_ref"].getSymmetricError()
+                            simple_result["ecm_ref value"] = interact_results[op][
+                                "ecm_ref"
+                            ].getFullEstimate()
+                            simple_result["ecm_ref error"] = interact_results[op][
+                                "ecm_ref"
+                            ].getSymmetricError()
                         interact_channel_results.append(simple_result)
                     else:
                         complete_channel = False
-                        logging.warning(f"Channel {int_channel}, operator {str(op)} not fitted successfully. Omitting from interacting estimates.")
+                        logging.warning(
+                            f"Channel {int_channel}, operator {str(op)} not fitted successfully. Omitting from interacting estimates."
+                        )
 
                 if complete_channel:
                     interact_channel_results.sort(key=energy_sort)
-                    [item.update({"fit level": i}) for i, item in enumerate(interact_channel_results)]
+                    [
+                        item.update({"fit level": i})
+                        for i, item in enumerate(interact_channel_results)
+                    ]
 
                 out_interact_results += interact_channel_results
 
             if out_interact_results:
                 interact_df = pd.DataFrame.from_dict(out_interact_results)
-                interact_df.to_csv(self.spectrum_fit_estimates('interacting'), index=False, header=True)
-                logging.info(f"Wrote final fit interacting estimates to file {self.spectrum_fit_estimates('interacting')}.")
+                interact_df.to_csv(
+                    self.spectrum_fit_estimates("interacting"), index=False, header=True
+                )
+                logging.info(
+                    f"Wrote final fit interacting estimates to file {self.spectrum_fit_estimates('interacting')}."
+                )
 
             ## NON-INTERACTING RESULTS ## (really non-rotated)
             out_sh_results = []
@@ -1194,19 +1621,29 @@ class SigmondSpectrumFits:
                         sh_channel_results.append(simple_result)
                     else:
                         complete_channel = False
-                        logging.warning(f"Channel {sh_channel}, operator {op} not fitted successfully. Omitting from single hadron estimates.")
+                        logging.warning(
+                            f"Channel {sh_channel}, operator {op} not fitted successfully. Omitting from single hadron estimates."
+                        )
 
                 if complete_channel:
                     sh_channel_results.sort(key=energy_sort)
-                    [item.update({"fit level": i}) for i, item in enumerate(sh_channel_results)]
+                    [
+                        item.update({"fit level": i})
+                        for i, item in enumerate(sh_channel_results)
+                    ]
 
                 out_sh_results += sh_channel_results
 
             if out_sh_results:
                 sh_df = pd.DataFrame.from_dict(out_sh_results)
-                sh_df.to_csv(self.spectrum_fit_estimates('single_hadrons'), index=False, header=True)
+                sh_df.to_csv(
+                    self.spectrum_fit_estimates("single_hadrons"),
+                    index=False,
+                    header=True,
+                )
                 logging.info(
-                    f"Wrote final fit single hadron estimates to file {self.spectrum_fit_estimates('single_hadrons')}.")
+                    f"Wrote final fit single hadron estimates to file {self.spectrum_fit_estimates('single_hadrons')}."
+                )
 
             ## VARYING TMIN RESULTS - INTERACTING ##
             out_interact_tmin_results = []
@@ -1215,7 +1652,8 @@ class SigmondSpectrumFits:
                 # Ensure channel exists in tmin_results
                 if channel not in self.tmin_results:
                     logging.warning(
-                        f"Channel {channel} not found in tmin_results for interacting tmin estimates. Skipping.")
+                        f"Channel {channel} not found in tmin_results for interacting tmin estimates. Skipping."
+                    )
                     continue
 
                 for op in self.tmin_results[channel]:
@@ -1231,16 +1669,25 @@ class SigmondSpectrumFits:
                     # Ensure op exists in tmin_results[channel]
                     if op not in self.tmin_results[channel]:
                         logging.warning(
-                            f"Operator {op} in Channel {channel} not found in tmin_results for interacting tmin estimates. Skipping.")
+                            f"Operator {op} in Channel {channel} not found in tmin_results for interacting tmin estimates. Skipping."
+                        )
                         continue
 
                     for model in self.tmin_results[channel][op]["fits"]:
                         for tmin_val in self.tmin_results[channel][op]["fits"][model]:
                             # Check if the tmin_val entry is valid data and not metadata like "info"
-                            if self.tmin_results[channel][op]["fits"][model][tmin_val] and tmin_val != "info":
-                                fit_data = self.tmin_results[channel][op]["fits"][model][tmin_val]
-                                info_data = self.tmin_results[channel][op]["fits"][model].get(
-                                    "info")  # Get corresponding info
+                            if (
+                                self.tmin_results[channel][op]["fits"][model][tmin_val]
+                                and tmin_val != "info"
+                            ):
+                                fit_data = self.tmin_results[channel][op]["fits"][
+                                    model
+                                ][tmin_val]
+                                info_data = self.tmin_results[channel][op]["fits"][
+                                    model
+                                ].get(
+                                    "info"
+                                )  # Get corresponding info
 
                                 simple_result = {
                                     "isospin": channel.isospin,
@@ -1258,33 +1705,60 @@ class SigmondSpectrumFits:
                                     "qual": fit_data["qual"],
                                     "dof": fit_data["dof"],
                                 }
-                                if "dElab" in fit_data:  # Check if dElab is in the specific tmin fit data
-                                    simple_result["dElab value"] = fit_data["dElab"].getFullEstimate()
-                                    simple_result["dElab error"] = fit_data["dElab"].getSymmetricError()
-                                    if str(channel) in self.other_params.get('non_interacting_levels', {}) and \
-                                            op.level < len(self.other_params['non_interacting_levels'][str(channel)]):
-                                        simple_result["non-interacting level"] = \
-                                            self.other_params['non_interacting_levels'][str(channel)][op.level]
+                                if (
+                                    "dElab" in fit_data
+                                ):  # Check if dElab is in the specific tmin fit data
+                                    simple_result["dElab value"] = fit_data[
+                                        "dElab"
+                                    ].getFullEstimate()
+                                    simple_result["dElab error"] = fit_data[
+                                        "dElab"
+                                    ].getSymmetricError()
+                                    if str(channel) in self.other_params.get(
+                                        "non_interacting_levels", {}
+                                    ) and op.level < len(
+                                        self.other_params["non_interacting_levels"][
+                                            str(channel)
+                                        ]
+                                    ):
+                                        simple_result["non-interacting level"] = (
+                                            self.other_params["non_interacting_levels"][
+                                                str(channel)
+                                            ][op.level]
+                                        )
                                 if "dElab_ref" in fit_data:
-                                    simple_result["dElab_ref value"] = fit_data["dElab_ref"].getFullEstimate()
-                                    simple_result["dElab_ref error"] = fit_data["dElab_ref"].getSymmetricError()
+                                    simple_result["dElab_ref value"] = fit_data[
+                                        "dElab_ref"
+                                    ].getFullEstimate()
+                                    simple_result["dElab_ref error"] = fit_data[
+                                        "dElab_ref"
+                                    ].getSymmetricError()
 
                                 channel_results.append(simple_result)
                 out_interact_tmin_results += channel_results
 
             if out_interact_tmin_results:
                 interact_tmin_df = pd.DataFrame.from_dict(out_interact_tmin_results)
-                interact_tmin_df.to_csv(self.spectrum_tmin_estimates('interacting'), index=False, header=True)
-                logging.info(f"Wrote varying tmin fit interacting estimates to file {self.spectrum_tmin_estimates('interacting')}.")
+                interact_tmin_df.to_csv(
+                    self.spectrum_tmin_estimates("interacting"),
+                    index=False,
+                    header=True,
+                )
+                logging.info(
+                    f"Wrote varying tmin fit interacting estimates to file {self.spectrum_tmin_estimates('interacting')}."
+                )
 
             ## VARYING TMIN RESULTS - NON-INTERACTING (SINGLE HADRONS) ##
             out_sh_tmin_results = []
-            for channel in self.single_hadron_channels:  # Iterate over single_hadron_channels
+            for (
+                channel
+            ) in self.single_hadron_channels:  # Iterate over single_hadron_channels
                 channel_results = []
                 # Ensure channel exists in tmin_results
                 if channel not in self.tmin_results:
                     logging.warning(
-                        f"Channel {channel} not found in tmin_results for single hadron tmin estimates. Skipping.")
+                        f"Channel {channel} not found in tmin_results for single hadron tmin estimates. Skipping."
+                    )
                     continue
 
                 for op in self.tmin_results[channel]:
@@ -1294,21 +1768,32 @@ class SigmondSpectrumFits:
                         irrep = op.operator_info.getBasicLapH().getLGIrrep()
 
                     # Ensure op is actually a single hadron result we care about for this context
-                    if channel not in self.single_hadron_results or op not in self.single_hadron_results[channel]:
+                    if (
+                        channel not in self.single_hadron_results
+                        or op not in self.single_hadron_results[channel]
+                    ):
                         continue
 
                     # Ensure op exists in tmin_results[channel] (secondary check, might be redundant if above is sufficient)
                     if op not in self.tmin_results[channel]:
                         logging.warning(
-                            f"Operator {op} in Channel {channel} not found in tmin_results for single hadron tmin estimates. Skipping.")
+                            f"Operator {op} in Channel {channel} not found in tmin_results for single hadron tmin estimates. Skipping."
+                        )
                         continue
 
                     for model in self.tmin_results[channel][op]["fits"]:
                         for tmin_val in self.tmin_results[channel][op]["fits"][model]:
                             # Check if the tmin_val entry is valid data and not metadata like "info"
-                            if self.tmin_results[channel][op]["fits"][model][tmin_val] and tmin_val != "info":
-                                fit_data = self.tmin_results[channel][op]["fits"][model][tmin_val]
-                                info_data = self.tmin_results[channel][op]["fits"][model].get("info")
+                            if (
+                                self.tmin_results[channel][op]["fits"][model][tmin_val]
+                                and tmin_val != "info"
+                            ):
+                                fit_data = self.tmin_results[channel][op]["fits"][
+                                    model
+                                ][tmin_val]
+                                info_data = self.tmin_results[channel][op]["fits"][
+                                    model
+                                ].get("info")
 
                                 simple_result = {
                                     "isospin": channel.isospin,
@@ -1330,48 +1815,59 @@ class SigmondSpectrumFits:
 
             if out_sh_tmin_results:
                 sh_tmin_df = pd.DataFrame.from_dict(out_sh_tmin_results)
-                sh_tmin_df.to_csv(self.spectrum_tmin_estimates('single_hadrons'), index=False, header=True)
-                logging.info(f"Wrote varying tmin fit single hadron estimates to file {self.spectrum_tmin_estimates('single_hadrons')}.")
+                sh_tmin_df.to_csv(
+                    self.spectrum_tmin_estimates("single_hadrons"),
+                    index=False,
+                    header=True,
+                )
+                logging.info(
+                    f"Wrote varying tmin fit single hadron estimates to file {self.spectrum_tmin_estimates('single_hadrons')}."
+                )
 
-
-    #sort single hadron channel based on operator list given
-    def sh_channel_sort(self, item): 
-        for particle in self.other_params['single_hadrons']:
-            for i,op in enumerate(self.other_params['single_hadrons'][particle]):
+    # sort single hadron channel based on operator list given
+    def sh_channel_sort(self, item):
+        for particle in self.other_params["single_hadrons"]:
+            for i, op in enumerate(self.other_params["single_hadrons"][particle]):
                 thisop = operator.Operator(op)
                 if thisop.channel == item:
                     break
             if thisop.channel == item:
                 break
         return f"{particle}{i}"
-    
+
     def get_pivoter(self, channel):
         pivot_type = sigmond_util.get_pivot_type(self.other_params["pivot_file"])
-        
-        
-        if pivot_type==None:
-            logging.warning("Given file for pivot is not a pivot type. Non-interacting single hadrons can not be calculated.")
+
+        if pivot_type == None:
+            logging.warning(
+                "Given file for pivot is not a pivot type. Non-interacting single hadrons can not be calculated."
+            )
             self.other_params["compute_overlaps"] = False
-            
-        pivoter = sigmond_util.setup_pivoter(pivot_type, self.other_params["pivot_file"], channel, self.mcobs_handler)
-        
+
+        pivoter = sigmond_util.setup_pivoter(
+            pivot_type, self.other_params["pivot_file"], channel, self.mcobs_handler
+        )
+
         return pivoter
-        
-    
-    def plot( self ):
-        if self.other_params['plot']:
-            logging.info(f"Saving plots to directory {self.proj_files_handler.plot_dir()}...")
+
+    def plot(self):
+        if self.other_params["plot"]:
+            logging.info(
+                f"Saving plots to directory {self.proj_files_handler.plot_dir()}..."
+            )
         else:
             logging.info(f"No plots requested.")
             return
-        
-        #sort channel order
+
+        # sort channel order
         self.single_hadron_channels.sort(key=self.sh_channel_sort)
         self.interacting_channels.sort(key=sigmond_util.channel_sort)
-        
-        #set up plotting handler
+
+        # set up plotting handler
         plh = ph.PlottingHandler()
-        plh.create_fig(15,8) #self.other_params['figwidth'], self.other_params['figheight'])
+        plh.create_fig(
+            15, 8
+        )  # self.other_params['figwidth'], self.other_params['figheight'])
 
         # self.project_handler.nodes = 0
         start_time = time.time()
@@ -1382,45 +1878,64 @@ class SigmondSpectrumFits:
         if self.other_params["do_interacting_fits"]:
 
             # check if any channels have single ops
-            if self.other_params['summary_plot_max_levels']:
+            if self.other_params["summary_plot_max_levels"]:
                 for channel, val in self.assignment_certainty.items():
                     if val is None:
                         # if so, don't do max_levels plot
-                        self.other_params['summary_plot_max_levels'] = False
-                        logging.warning("Single hadron levels in rotated matrix. Skipping max_levels plot.")
+                        self.other_params["summary_plot_max_levels"] = False
+                        logging.warning(
+                            "Single hadron levels in rotated matrix. Skipping max_levels plot."
+                        )
                         break
 
             if self.project_handler.nodes:
-                processes.append(Process(target=self.summary_spectrum_plot,args=(plh,)))
+                processes.append(
+                    Process(target=self.summary_spectrum_plot, args=(plh,))
+                )
                 processes[-1].start()
                 ip += 1
-                if self.default_interacting_corr_fit['ratio']:
-                    processes.append(Process(target=self.summary_dElab_spectrum_plot,args=(plh,)))
+                if self.default_interacting_corr_fit["ratio"]:
+                    processes.append(
+                        Process(target=self.summary_dElab_spectrum_plot, args=(plh,))
+                    )
                     processes[-1].start()
                     ip += 1
-                    if self.other_params['summary_plot_max_levels']:
-                        processes.append(Process(target=self.summary_dElab_spectrum_plot,args=(plh, self.other_params['summary_plot_max_levels'],
-                                                                                            True, True)))
+                    if self.other_params["summary_plot_max_levels"]:
+                        processes.append(
+                            Process(
+                                target=self.summary_dElab_spectrum_plot,
+                                args=(
+                                    plh,
+                                    self.other_params["summary_plot_max_levels"],
+                                    True,
+                                    True,
+                                ),
+                            )
+                        )
                         processes[-1].start()
                         ip += 1
             else:
                 self.summary_spectrum_plot(plh)
-                if self.default_interacting_corr_fit['ratio']:
+                if self.default_interacting_corr_fit["ratio"]:
                     self.summary_dElab_spectrum_plot(plh)
-                    if self.other_params['summary_plot_max_levels']:
-                        self.summary_dElab_spectrum_plot(plh,self.other_params['summary_plot_max_levels'], True, True)
-                
-        
+                    if self.other_params["summary_plot_max_levels"]:
+                        self.summary_dElab_spectrum_plot(
+                            plh,
+                            self.other_params["summary_plot_max_levels"],
+                            True,
+                            True,
+                        )
+
         all_sim_fit_plots = {}
         # all_op_overlap_plots = {}
 
-        #fit plots
-        plh.set_figsize(self.other_params['figwidth'], self.other_params['figheight'])
-        all_channels = [('sh',channel) for channel in self.single_hadron_channels]
-        all_channels += [('int',channel) for channel in self.interacting_channels]
+        # fit plots
+        plh.set_figsize(self.other_params["figwidth"], self.other_params["figheight"])
+        all_channels = [("sh", channel) for channel in self.single_hadron_channels]
+        all_channels += [("int", channel) for channel in self.interacting_channels]
         for ctype, channel in all_channels:
             results = {}
-            if ctype=='sh':
+            if ctype == "sh":
                 results.update(self.single_hadron_results[channel])
             else:
                 results.update(self.results[channel])
@@ -1429,189 +1944,408 @@ class SigmondSpectrumFits:
                 all_sim_fit_plots[channel] = {}
                 logging.info(f"\tGenerating plots for channel {str(channel)}...")
                 # if self.other_params['create_summary']:
-                    # if not entered_interacting_section and channel in self.interacting_channels:
-                    #     plh.append_section(str("Interacting Levels"))
-                    #     entered_interacting_section = True
-                    # plh.append_subsection(str(channel))
+                # if not entered_interacting_section and channel in self.interacting_channels:
+                #     plh.append_section(str("Interacting Levels"))
+                #     entered_interacting_section = True
+                # plh.append_subsection(str(channel))
 
                 for op in results:
-                    #plott corr and fit 
-                    op_name = str(op).replace(" ","_")
+                    # plott corr and fit
+                    op_name = str(op).replace(" ", "_")
                     this_op = op
                     if results[op]["success"]:
                         # the sub_vev conditional below is needed since it appears the no ratio ops are labeled with
                         # sub_vev in the mcobs handler and thus disagree with the ratio_op
-                        if results[op]['info'].ratio:
+                        if results[op]["info"].ratio:
                             this_op = op.ratio_op
                             sub_vev = False
                         else:
-                            sub_vev = sigmond_util.do_subtract_vev(this_op, self.project_handler)
+                            sub_vev = sigmond_util.do_subtract_vev(
+                                this_op, self.project_handler
+                            )
 
-                        corr = sigmond.CorrelatorInfo(this_op.operator_info,this_op.operator_info)
-                        estimates = sigmond.getCorrelatorEstimates(self.mcobs_handler,corr,self.project_handler.hermitian,
-                                                                   sub_vev,sigmond.ComplexArg.RealPart,
-                                                                   self.project_handler.project_info.sampling_info.getSamplingMode())
+                        corr = sigmond.CorrelatorInfo(
+                            this_op.operator_info, this_op.operator_info
+                        )
+                        estimates = sigmond.getCorrelatorEstimates(
+                            self.mcobs_handler,
+                            corr,
+                            self.project_handler.hermitian,
+                            sub_vev,
+                            sigmond.ComplexArg.RealPart,
+                            self.project_handler.project_info.sampling_info.getSamplingMode(),
+                        )
                         df = sigmond_util.estimates_to_df(estimates)
 
                         plh.clf()
                         if self.project_handler.nodes:
                             # Extract lattice time extent once to avoid pickling ensemble_info
-                            lattice_time_extent = self.ensemble_info.getLatticeTimeExtent()
+                            lattice_time_extent = (
+                                self.ensemble_info.getLatticeTimeExtent()
+                            )
                             pickle_file = ""
                             pdf_file = ""
-                            if self.other_params['create_pickles']:
-                                pickle_file = self.proj_files_handler.corr_plot_file( op_name, "pickle")
-                            if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-                                pdf_file = self.proj_files_handler.corr_plot_file( op_name, "pdf")
+                            if self.other_params["create_pickles"]:
+                                pickle_file = self.proj_files_handler.corr_plot_file(
+                                    op_name, "pickle"
+                                )
+                            if (
+                                self.other_params["create_pdfs"]
+                                or self.other_params["create_summary"]
+                            ):
+                                pdf_file = self.proj_files_handler.corr_plot_file(
+                                    op_name, "pdf"
+                                )
 
-                            if len(processes)<self.project_handler.nodes:
-                                processes.append(Process(target=plh.sigmond_corrfit_plot_and_save,
-                                                         args=(df, results[op], lattice_time_extent, 0, None,pickle_file, pdf_file,)))
+                            if len(processes) < self.project_handler.nodes:
+                                processes.append(
+                                    Process(
+                                        target=plh.sigmond_corrfit_plot_and_save,
+                                        args=(
+                                            df,
+                                            results[op],
+                                            lattice_time_extent,
+                                            0,
+                                            None,
+                                            pickle_file,
+                                            pdf_file,
+                                        ),
+                                    )
+                                )
                                 processes[-1].start()
                             else:
                                 processes[ip].join()
-                                processes[ip] = Process(target=plh.sigmond_corrfit_plot_and_save,
-                                                        args=(df, results[op], lattice_time_extent, 0, None,pickle_file, pdf_file,))
+                                processes[ip] = Process(
+                                    target=plh.sigmond_corrfit_plot_and_save,
+                                    args=(
+                                        df,
+                                        results[op],
+                                        lattice_time_extent,
+                                        0,
+                                        None,
+                                        pickle_file,
+                                        pdf_file,
+                                    ),
+                                )
                                 processes[ip].start()
-                            ip = sigmond_util.update_process_index(ip,self.project_handler.nodes)
+                            ip = sigmond_util.update_process_index(
+                                ip, self.project_handler.nodes
+                            )
                         else:
-                            plh.sigmond_corrfit_plot(df, results[op], self.ensemble_info.getLatticeTimeExtent(), 0) #, this_op) #0 for regular corr plot
+                            plh.sigmond_corrfit_plot(
+                                df,
+                                results[op],
+                                self.ensemble_info.getLatticeTimeExtent(),
+                                0,
+                            )  # , this_op) #0 for regular corr plot
 
-                            if self.other_params['create_pickles']:
-                                plh.save_pickle(self.proj_files_handler.corr_plot_file( op_name, "pickle"))
-                            if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-                                plh.save_pdf(self.proj_files_handler.corr_plot_file( op_name, "pdf"))
+                            if self.other_params["create_pickles"]:
+                                plh.save_pickle(
+                                    self.proj_files_handler.corr_plot_file(
+                                        op_name, "pickle"
+                                    )
+                                )
+                            if (
+                                self.other_params["create_pdfs"]
+                                or self.other_params["create_summary"]
+                            ):
+                                plh.save_pdf(
+                                    self.proj_files_handler.corr_plot_file(
+                                        op_name, "pdf"
+                                    )
+                                )
 
-                        estimates = sigmond.getEffectiveEnergy(self.mcobs_handler,corr,self.project_handler.hermitian,
-                                                               sub_vev,sigmond.ComplexArg.RealPart,
-                                                               self.project_handler.project_info.sampling_info.getSamplingMode(),
-                                                               self.project_handler.time_separation,
-                                                               self.project_handler.effective_energy_type,
-                                                               self.project_handler.vev_const)
+                        estimates = sigmond.getEffectiveEnergy(
+                            self.mcobs_handler,
+                            corr,
+                            self.project_handler.hermitian,
+                            sub_vev,
+                            sigmond.ComplexArg.RealPart,
+                            self.project_handler.project_info.sampling_info.getSamplingMode(),
+                            self.project_handler.time_separation,
+                            self.project_handler.effective_energy_type,
+                            self.project_handler.vev_const,
+                        )
                         df = sigmond_util.estimates_to_df(estimates)
 
                         plh.clf()
                         if self.project_handler.nodes:
                             # Extract lattice time extent once to avoid pickling ensemble_info
-                            lattice_time_extent = self.ensemble_info.getLatticeTimeExtent()
+                            lattice_time_extent = (
+                                self.ensemble_info.getLatticeTimeExtent()
+                            )
                             pickle_file = ""
                             pdf_file = ""
-                            if self.other_params['create_pickles']:
-                                pickle_file = self.proj_files_handler.effen_plot_file( op_name, "pickle")
-                            if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-                                pdf_file = self.proj_files_handler.effen_plot_file( op_name, "pdf")
-                            if len(processes)<self.project_handler.nodes:
-                                processes.append(Process(target=plh.sigmond_corrfit_plot_and_save,
-                                                         args=(df, results[op], lattice_time_extent, 1, this_op,pickle_file, pdf_file,)))
+                            if self.other_params["create_pickles"]:
+                                pickle_file = self.proj_files_handler.effen_plot_file(
+                                    op_name, "pickle"
+                                )
+                            if (
+                                self.other_params["create_pdfs"]
+                                or self.other_params["create_summary"]
+                            ):
+                                pdf_file = self.proj_files_handler.effen_plot_file(
+                                    op_name, "pdf"
+                                )
+                            if len(processes) < self.project_handler.nodes:
+                                processes.append(
+                                    Process(
+                                        target=plh.sigmond_corrfit_plot_and_save,
+                                        args=(
+                                            df,
+                                            results[op],
+                                            lattice_time_extent,
+                                            1,
+                                            this_op,
+                                            pickle_file,
+                                            pdf_file,
+                                        ),
+                                    )
+                                )
                                 processes[-1].start()
                             else:
                                 processes[ip].join()
-                                processes[ip] = Process(target=plh.sigmond_corrfit_plot_and_save,
-                                                        args=(df, results[op], lattice_time_extent, 1, this_op,pickle_file, pdf_file,))
+                                processes[ip] = Process(
+                                    target=plh.sigmond_corrfit_plot_and_save,
+                                    args=(
+                                        df,
+                                        results[op],
+                                        lattice_time_extent,
+                                        1,
+                                        this_op,
+                                        pickle_file,
+                                        pdf_file,
+                                    ),
+                                )
                                 processes[ip].start()
-                            ip = sigmond_util.update_process_index(ip,self.project_handler.nodes)
+                            ip = sigmond_util.update_process_index(
+                                ip, self.project_handler.nodes
+                            )
                         else:
-                            plh.sigmond_corrfit_plot(df, results[op], self.ensemble_info.getLatticeTimeExtent(), 1) #, this_op) #0 for regular corr plot
+                            plh.sigmond_corrfit_plot(
+                                df,
+                                results[op],
+                                self.ensemble_info.getLatticeTimeExtent(),
+                                1,
+                            )  # , this_op) #0 for regular corr plot
 
-                            if self.other_params['create_pickles']:
-                                plh.save_pickle(self.proj_files_handler.effen_plot_file( op_name, "pickle"))
-                            if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-                                plh.save_pdf(self.proj_files_handler.effen_plot_file( op_name, "pdf"))
+                            if self.other_params["create_pickles"]:
+                                plh.save_pickle(
+                                    self.proj_files_handler.effen_plot_file(
+                                        op_name, "pickle"
+                                    )
+                                )
+                            if (
+                                self.other_params["create_pdfs"]
+                                or self.other_params["create_summary"]
+                            ):
+                                plh.save_pdf(
+                                    self.proj_files_handler.effen_plot_file(
+                                        op_name, "pdf"
+                                    )
+                                )
 
                         # if self.other_params['create_summary']:
                         #     plh.add_correlator_subsection(str(op),self.proj_files_handler.corr_plot_file( op_name, "pdf"),
                         #                                     self.proj_files_handler.effen_plot_file( op_name, "pdf"))
-                        
+
                         sim_plot_files = []
                         if results[op]["info"].sim_fit:
-                            ni_levels = self.other_params['non_interacting_levels'][str(channel)][op.level]
-                            for i,sh in enumerate(OrderedSet(ni_levels)):
+                            ni_levels = self.other_params["non_interacting_levels"][
+                                str(channel)
+                            ][op.level]
+                            for i, sh in enumerate(OrderedSet(ni_levels)):
                                 plh.clf()
                                 shop = self.get_sh_operator(sh)
-                                corr = sigmond.CorrelatorInfo(shop.operator_info,shop.operator_info)
-                                estimates = sigmond.getEffectiveEnergy(self.mcobs_handler,corr,self.project_handler.hermitian,
-                                                                       sub_vev,sigmond.ComplexArg.RealPart,
-                                                                       self.project_handler.project_info.sampling_info.getSamplingMode(),
-                                                                       self.project_handler.time_separation,
-                                                                       self.project_handler.effective_energy_type,
-                                                                       self.project_handler.vev_const)
-                                shtmin = self.single_hadron_results[shop.channel][shop]["info"].tmin
-                                shtmax = self.single_hadron_results[shop.channel][shop]["info"].tmax
+                                corr = sigmond.CorrelatorInfo(
+                                    shop.operator_info, shop.operator_info
+                                )
+                                estimates = sigmond.getEffectiveEnergy(
+                                    self.mcobs_handler,
+                                    corr,
+                                    self.project_handler.hermitian,
+                                    sub_vev,
+                                    sigmond.ComplexArg.RealPart,
+                                    self.project_handler.project_info.sampling_info.getSamplingMode(),
+                                    self.project_handler.time_separation,
+                                    self.project_handler.effective_energy_type,
+                                    self.project_handler.vev_const,
+                                )
+                                shtmin = self.single_hadron_results[shop.channel][shop][
+                                    "info"
+                                ].tmin
+                                shtmax = self.single_hadron_results[shop.channel][shop][
+                                    "info"
+                                ].tmax
                                 df = sigmond_util.estimates_to_df(estimates)
-                                plh.sigmond_corrfit_plot(df, self.results[channel][op], self.ensemble_info.getLatticeTimeExtent(), 1, shop, i+1, new_trange=(shtmin,shtmax))
-                                if self.other_params['create_pickles']:
-                                    plh.save_pickle(self.proj_files_handler.effen_plot_file( f"{op_name}-{sh}", "pickle"))
-                                if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-                                    plh.save_pdf(self.proj_files_handler.effen_plot_file( f"{op_name}-{sh}", "pdf"))
-                                sim_plot_files.append(self.proj_files_handler.effen_plot_file( f"{op_name}-{sh}", "pdf"))
+                                plh.sigmond_corrfit_plot(
+                                    df,
+                                    self.results[channel][op],
+                                    self.ensemble_info.getLatticeTimeExtent(),
+                                    1,
+                                    shop,
+                                    i + 1,
+                                    new_trange=(shtmin, shtmax),
+                                )
+                                if self.other_params["create_pickles"]:
+                                    plh.save_pickle(
+                                        self.proj_files_handler.effen_plot_file(
+                                            f"{op_name}-{sh}", "pickle"
+                                        )
+                                    )
+                                if (
+                                    self.other_params["create_pdfs"]
+                                    or self.other_params["create_summary"]
+                                ):
+                                    plh.save_pdf(
+                                        self.proj_files_handler.effen_plot_file(
+                                            f"{op_name}-{sh}", "pdf"
+                                        )
+                                    )
+                                sim_plot_files.append(
+                                    self.proj_files_handler.effen_plot_file(
+                                        f"{op_name}-{sh}", "pdf"
+                                    )
+                                )
 
                     # else:
                     #     plh.append_subsubsection(str(op))
-                        
+
                     if channel in self.tmin_results:
                         if op in self.tmin_results[channel]:
-                            for energy_type in ["elab","dElab"]:
-                                sim_fits = self.tmin_fit_plot(plh, energy_type, results, channel, op, op_name)
+                            for energy_type in ["elab", "dElab"]:
+                                sim_fits = self.tmin_fit_plot(
+                                    plh, energy_type, results, channel, op, op_name
+                                )
                             # if self.other_params['create_summary'] and os.path.exists(self.proj_files_handler.corr_fit_series_plot_file( op_name, "elab", "pdf", "tmin")):
                             #     plh.include_additional_plots(self.proj_files_handler.corr_fit_series_plot_file( op_name, "elab", "pdf","tmin"),
                             #                                  self.proj_files_handler.corr_fit_series_plot_file(op_name,"dElab","pdf","tmin"))
                             if sim_fits:
                                 for sh, sh_tmin in sim_fits.items():
                                     sh_op = self.get_sh_operator(sh)
-                                    ind_fit = self.single_hadron_results[sh_op.channel][sh_op]
-                                    ind_fit_estimate = ind_fit["estimates"][ind_fit["info"].energy_index]
-                                    sim_plot_files.append(self.sim_tmin_plot(sh,sh_tmin, op_name, plh, ind_fit_estimate))
+                                    ind_fit = self.single_hadron_results[sh_op.channel][
+                                        sh_op
+                                    ]
+                                    ind_fit_estimate = ind_fit["estimates"][
+                                        ind_fit["info"].energy_index
+                                    ]
+                                    sim_plot_files.append(
+                                        self.sim_tmin_plot(
+                                            sh, sh_tmin, op_name, plh, ind_fit_estimate
+                                        )
+                                    )
                     if channel in self.tmax_results:
                         if op in self.tmax_results[channel]:
-                            for energy_type in ["elab","dElab"]:
-                                sim_fits = self.tmin_fit_plot(plh, energy_type, results, channel, op, op_name, False)
+                            for energy_type in ["elab", "dElab"]:
+                                sim_fits = self.tmin_fit_plot(
+                                    plh,
+                                    energy_type,
+                                    results,
+                                    channel,
+                                    op,
+                                    op_name,
+                                    False,
+                                )
                             # if self.other_params['create_summary'] and os.path.exists(self.proj_files_handler.corr_fit_series_plot_file( op_name, "elab", "pdf","tmax")):
                             #     plh.include_additional_plots(self.proj_files_handler.corr_fit_series_plot_file( op_name, "elab", "pdf","tmax"),
                             #                                  self.proj_files_handler.corr_fit_series_plot_file(op_name,"dElab","pdf","tmax"))
                             if sim_fits:
                                 for sh, sh_tmin in sim_fits.items():
                                     sh_op = self.get_sh_operator(sh)
-                                    ind_fit = self.single_hadron_results[sh_op.channel][sh_op]
-                                    ind_fit_estimate = ind_fit["estimates"][ind_fit["info"].energy_index]
-                                    sim_plot_files.append(self.sim_tmin_plot(sh,sh_tmin, op_name, plh, ind_fit_estimate, False))
+                                    ind_fit = self.single_hadron_results[sh_op.channel][
+                                        sh_op
+                                    ]
+                                    ind_fit_estimate = ind_fit["estimates"][
+                                        ind_fit["info"].energy_index
+                                    ]
+                                    sim_plot_files.append(
+                                        self.sim_tmin_plot(
+                                            sh,
+                                            sh_tmin,
+                                            op_name,
+                                            plh,
+                                            ind_fit_estimate,
+                                            False,
+                                        )
+                                    )
 
-                    
                     all_sim_fit_plots[channel][op] = sim_plot_files
                     # if sim_plot_files and self.other_params['create_summary']:
                     #     plh.add_plot_series(sim_plot_files)
 
-                #plot operator overlaps for interacting channels
-                if self.other_params["compute_overlaps"] and channel in self.interacting_channels and ctype == 'int':
+                # plot operator overlaps for interacting channels
+                if (
+                    self.other_params["compute_overlaps"]
+                    and channel in self.interacting_channels
+                    and ctype == "int"
+                ):
                     if channel in self.zmags:
                         if self.project_handler.nodes:
-                            if len(processes)<self.project_handler.nodes:
-                                processes.append(Process(target=self.generate_operator_overlaps_plots, args=(channel, plh,)))
+                            if len(processes) < self.project_handler.nodes:
+                                processes.append(
+                                    Process(
+                                        target=self.generate_operator_overlaps_plots,
+                                        args=(
+                                            channel,
+                                            plh,
+                                        ),
+                                    )
+                                )
                                 processes[-1].start()
                             else:
                                 processes[ip].join()
-                                processes[ip] = Process(target=self.generate_operator_overlaps_plots, args=(channel, plh,))
+                                processes[ip] = Process(
+                                    target=self.generate_operator_overlaps_plots,
+                                    args=(
+                                        channel,
+                                        plh,
+                                    ),
+                                )
                                 processes[ip].start()
-                            ip = sigmond_util.update_process_index(ip,self.project_handler.nodes)
+                            ip = sigmond_util.update_process_index(
+                                ip, self.project_handler.nodes
+                            )
                         else:
                             self.generate_operator_overlaps_plots(channel, plh)
-                            
-                        if self.other_params['non_interacting_levels'].get(str(channel), {}) != {}\
-                            and self.assignment_certainty[channel] is not None:
+
+                        if (
+                            self.other_params["non_interacting_levels"].get(
+                                str(channel), {}
+                            )
+                            != {}
+                            and self.assignment_certainty[channel] is not None
+                        ):
 
                             if self.project_handler.nodes:
-                                if len(processes)<self.project_handler.nodes:
-                                    processes.append(Process(target=self.generate_ni_level_certainty_plot, args=(channel, plh,)))
+                                if len(processes) < self.project_handler.nodes:
+                                    processes.append(
+                                        Process(
+                                            target=self.generate_ni_level_certainty_plot,
+                                            args=(
+                                                channel,
+                                                plh,
+                                            ),
+                                        )
+                                    )
                                     processes[-1].start()
                                 else:
                                     processes[ip].join()
-                                    processes[ip] = Process(target=self.generate_ni_level_certainty_plot, args=(channel, plh,))
+                                    processes[ip] = Process(
+                                        target=self.generate_ni_level_certainty_plot,
+                                        args=(
+                                            channel,
+                                            plh,
+                                        ),
+                                    )
                                     processes[ip].start()
-                                ip = sigmond_util.update_process_index(ip,self.project_handler.nodes)
+                                ip = sigmond_util.update_process_index(
+                                    ip, self.project_handler.nodes
+                                )
                             else:
                                 self.generate_ni_level_certainty_plot(channel, plh)
 
                         # files = []
-                                # files.append(self.proj_files_handler.operator_overlaps_plot( op_name, "pdf"))
+                        # files.append(self.proj_files_handler.operator_overlaps_plot( op_name, "pdf"))
 
                         # all_op_overlap_plots[channel] = files
                         # if self.other_params['create_summary']:
@@ -1621,20 +2355,27 @@ class SigmondSpectrumFits:
             for process in processes:
                 process.join()
 
-        print("Total plot time:", time.time()-start_time)
+        print("Total plot time:", time.time() - start_time)
 
-        #set up summary document, add summary plot and then tables
-        if self.other_params['create_summary']:
+        # set up summary document, add summary plot and then tables
+        if self.other_params["create_summary"]:
             plh.create_summary_doc("Fitted Correlators")
             plh.append_section("Summary")
             if self.interacting_channels:
                 plh.add_single_plot(self.proj_files_handler.summary_plot_file("pdf"))
-                if self.default_interacting_corr_fit['ratio']:
-                    plh.add_single_plot(self.proj_files_handler.summary_dElab_plot_file("pdf"))
-                    if self.other_params['summary_plot_max_levels']:
-                        plh.add_single_plot(self.proj_files_handler.summary_dElab_plot_file("pdf", filetag=f"max_{self.other_params['summary_plot_max_levels']}"))
+                if self.default_interacting_corr_fit["ratio"]:
+                    plh.add_single_plot(
+                        self.proj_files_handler.summary_dElab_plot_file("pdf")
+                    )
+                    if self.other_params["summary_plot_max_levels"]:
+                        plh.add_single_plot(
+                            self.proj_files_handler.summary_dElab_plot_file(
+                                "pdf",
+                                filetag=f"max_{self.other_params['summary_plot_max_levels']}",
+                            )
+                        )
 
-            #add single hadron table
+            # add single hadron table
             data = []
             for channel in self.single_hadron_channels:
                 for op in self.single_hadron_results[channel]:
@@ -1643,33 +2384,74 @@ class SigmondSpectrumFits:
                         single_hadron, _ = self.get_single_hadron(str(op))
                         line = [single_hadron, channel.psq, channel.irrep]
                         # line+=[utils.nice_value(this_fit["ecm_ref"].getFullEstimate(),this_fit["ecm_ref"].getSymmetricError())]
-                        line+=[utils.nice_value(this_fit["elab"].getFullEstimate(),this_fit["elab"].getSymmetricError())]
-                        line+=[this_fit["info"].model.short_name]
-                        line+=[f"[{this_fit['info'].tmin},{this_fit['info'].tmax}]"]
-                        line+=[format(this_fit["qual"],".2f")]
+                        line += [
+                            utils.nice_value(
+                                this_fit["elab"].getFullEstimate(),
+                                this_fit["elab"].getSymmetricError(),
+                            )
+                        ]
+                        line += [this_fit["info"].model.short_name]
+                        line += [f"[{this_fit['info'].tmin},{this_fit['info'].tmax}]"]
+                        line += [format(this_fit["qual"], ".2f")]
                         data.append(line)
-            headers = ["Name",r"$d^2$",r"$\Lambda$", r"$a_tE_{\textup{lab}}$", 
-                        "Fit Model", "$t$-range", "$p$-val"] #,rf"$E_{{\textup{{cm}}}}/E_{{latex_rest_mass}}$"
-            plh.summary_table(self.other_params['reference_particle'],headers,data,"Single Hadrons")
-            
-            #add spectrum table
+            headers = [
+                "Name",
+                r"$d^2$",
+                r"$\Lambda$",
+                r"$a_tE_{\textup{lab}}$",
+                "Fit Model",
+                "$t$-range",
+                "$p$-val",
+            ]  # ,rf"$E_{{\textup{{cm}}}}/E_{{latex_rest_mass}}$"
+            plh.summary_table(
+                self.other_params["reference_particle"], headers, data, "Single Hadrons"
+            )
+
+            # add spectrum table
             if self.interacting_channels:
                 data = []
                 old_channel = f"iso{self.interacting_channels[0].isospin} S={self.interacting_channels[0].strangeness} $d^2$={self.interacting_channels[0].psq}"
-                #mom irrep level ecm_ref elab dElab model (tmin,tmax) qual NI
-                if self.other_params['reference_particle']:
-                    headers = [r"$d^2$",r"$\Lambda$","Level",rf"$E_{{\textup{{cm}}}}/E_{{latex_rest_mass}}$", r"$a_tE_{\textup{lab}}$", 
-                                        r"$a_t\Delta E_{\textup{lab}}$", "Fit Model", "$t$-range", "$p$-val", "NI"]
+                # mom irrep level ecm_ref elab dElab model (tmin,tmax) qual NI
+                if self.other_params["reference_particle"]:
+                    headers = [
+                        r"$d^2$",
+                        r"$\Lambda$",
+                        "Level",
+                        rf"$E_{{\textup{{cm}}}}/E_{{latex_rest_mass}}$",
+                        r"$a_tE_{\textup{lab}}$",
+                        r"$a_t\Delta E_{\textup{lab}}$",
+                        "Fit Model",
+                        "$t$-range",
+                        "$p$-val",
+                        "NI",
+                    ]
                 else:
-                    headers = [r"$d^2$",r"$\Lambda$","Level",rf"$E_{{\textup{{cm}}}}$", r"$a_tE_{\textup{lab}}$", 
-                                        r"$a_t\Delta E_{\textup{lab}}$", "Fit Model", "$t$-range", "$p$-val", "NI"]
-                for channel in self.interacting_channels: #group by isospin and strangeness
+                    headers = [
+                        r"$d^2$",
+                        r"$\Lambda$",
+                        "Level",
+                        rf"$E_{{\textup{{cm}}}}$",
+                        r"$a_tE_{\textup{lab}}$",
+                        r"$a_t\Delta E_{\textup{lab}}$",
+                        "Fit Model",
+                        "$t$-range",
+                        "$p$-val",
+                        "NI",
+                    ]
+                for (
+                    channel
+                ) in self.interacting_channels:  # group by isospin and strangeness
                     complete = True
                     channel_data = []
 
-                    new_channel = f"iso{channel.isospin} S={channel.strangeness} $d^2$={channel.psq}" #separate tables by isospin and strangeness
-                    if new_channel!=old_channel:
-                        plh.summary_table(self.other_params['reference_particle'],headers,data,old_channel)
+                    new_channel = f"iso{channel.isospin} S={channel.strangeness} $d^2$={channel.psq}"  # separate tables by isospin and strangeness
+                    if new_channel != old_channel:
+                        plh.summary_table(
+                            self.other_params["reference_particle"],
+                            headers,
+                            data,
+                            old_channel,
+                        )
                         data = []
                         old_channel = new_channel
 
@@ -1677,76 +2459,150 @@ class SigmondSpectrumFits:
                         if self.results[channel][op]["success"]:
                             this_fit = self.results[channel][op]
                             line = [channel.psq, channel.irrep, op.level]
-                            if self.other_params['reference_particle']:
-                                line+=[utils.nice_value(this_fit["ecm_ref"].getFullEstimate(),this_fit["ecm_ref"].getSymmetricError())]
+                            if self.other_params["reference_particle"]:
+                                line += [
+                                    utils.nice_value(
+                                        this_fit["ecm_ref"].getFullEstimate(),
+                                        this_fit["ecm_ref"].getSymmetricError(),
+                                    )
+                                ]
                             else:
-                                line+=[utils.nice_value(this_fit["ecm"].getFullEstimate(),this_fit["ecm"].getSymmetricError())]
-                            line+=[utils.nice_value(this_fit["elab"].getFullEstimate(),this_fit["elab"].getSymmetricError())]
+                                line += [
+                                    utils.nice_value(
+                                        this_fit["ecm"].getFullEstimate(),
+                                        this_fit["ecm"].getSymmetricError(),
+                                    )
+                                ]
+                            line += [
+                                utils.nice_value(
+                                    this_fit["elab"].getFullEstimate(),
+                                    this_fit["elab"].getSymmetricError(),
+                                )
+                            ]
                             if "dElab" in this_fit:
-                                line+=[utils.nice_value(this_fit["dElab"].getFullEstimate(),this_fit["dElab"].getSymmetricError())]
+                                line += [
+                                    utils.nice_value(
+                                        this_fit["dElab"].getFullEstimate(),
+                                        this_fit["dElab"].getSymmetricError(),
+                                    )
+                                ]
                             else:
-                                line+=[""]
-                            line+=[this_fit["info"].model.short_name]
+                                line += [""]
+                            line += [this_fit["info"].model.short_name]
                             ni = []
                             if this_fit["info"].ratio:
-                                line[-1]+="-ratio"
-                            if self.other_params['non_interacting_levels'][str(channel)] is not None:
-                                ni = self.other_params['non_interacting_levels'][str(channel)][op.level]
-                            line+=[f"[{this_fit['info'].tmin},{this_fit['info'].tmax}]"]
-                            line+=[format(this_fit["qual"],".2f")]
-                            line+=["".join(ni)]
+                                line[-1] += "-ratio"
+                            if (
+                                self.other_params["non_interacting_levels"][
+                                    str(channel)
+                                ]
+                                is not None
+                            ):
+                                ni = self.other_params["non_interacting_levels"][
+                                    str(channel)
+                                ][op.level]
+                            line += [
+                                f"[{this_fit['info'].tmin},{this_fit['info'].tmax}]"
+                            ]
+                            line += [format(this_fit["qual"], ".2f")]
+                            line += ["".join(ni)]
                             channel_data.append(line)
                         else:
                             complete = False
 
                     if complete:
-                        channel_data.sort(key=table_sort_set(3)) #sort lines by increating energy
-                        for i,line in enumerate(channel_data):
-                            line[2] = rf"${line[2]} \to {i}$"#add reorder info
-                    data+=channel_data
+                        channel_data.sort(
+                            key=table_sort_set(3)
+                        )  # sort lines by increating energy
+                        for i, line in enumerate(channel_data):
+                            line[2] = rf"${line[2]} \to {i}$"  # add reorder info
+                    data += channel_data
 
-                plh.summary_table(self.other_params['reference_particle'],headers,data,old_channel)
+                plh.summary_table(
+                    self.other_params["reference_particle"], headers, data, old_channel
+                )
 
             plh.append_section(str("Single Hadrons"))
-            
+
             entered_interacting_section = False
             for ctype, channel in all_channels:
                 results = {}
-                if ctype=='sh':
+                if ctype == "sh":
                     results.update(self.single_hadron_results[channel])
                 else:
                     results.update(self.results[channel])
                 if results:
-                    if not entered_interacting_section and ctype=='int':
+                    if not entered_interacting_section and ctype == "int":
                         plh.append_section(str("Interacting Levels"))
                         entered_interacting_section = True
                     plh.append_subsection(str(channel))
                     for op in results:
-                        #plott corr and fit 
-                        op_name = str(op).replace(" ","_")
+                        # plott corr and fit
+                        op_name = str(op).replace(" ", "_")
                         this_op = op
                         if results[op]["success"]:
-                            plh.add_correlator_subsection(str(op),self.proj_files_handler.corr_plot_file( op_name, "pdf"),
-                                                            self.proj_files_handler.effen_plot_file( op_name, "pdf"))
+                            plh.add_correlator_subsection(
+                                str(op),
+                                self.proj_files_handler.corr_plot_file(op_name, "pdf"),
+                                self.proj_files_handler.effen_plot_file(op_name, "pdf"),
+                            )
                         else:
                             plh.append_subsubsection(str(op))
 
                         for range_key in ["tmin", "tmax"]:
-                            if channel in getattr(self, f"{range_key}_results") and op in getattr(self, f"{range_key}_results")[channel]:
-                                if os.path.exists(self.proj_files_handler.corr_fit_series_plot_file(op_name, "elab", "pdf", range_key)):
-                                    elab_file = self.proj_files_handler.corr_fit_series_plot_file(op_name, "elab", "pdf", range_key)
-                                    if os.path.exists(self.proj_files_handler.corr_fit_series_plot_file(op_name, "dElab", "pdf", range_key)) or ctype == 'sh':
-                                        plh.include_additional_plots(
-                                            elab_file,
-                                            self.proj_files_handler.corr_fit_series_plot_file(op_name, "dElab", "pdf", range_key)
+                            if (
+                                channel in getattr(self, f"{range_key}_results")
+                                and op in getattr(self, f"{range_key}_results")[channel]
+                            ):
+                                if os.path.exists(
+                                    self.proj_files_handler.corr_fit_series_plot_file(
+                                        op_name, "elab", "pdf", range_key
+                                    )
+                                ):
+                                    elab_file = self.proj_files_handler.corr_fit_series_plot_file(
+                                        op_name, "elab", "pdf", range_key
+                                    )
+                                    if (
+                                        os.path.exists(
+                                            self.proj_files_handler.corr_fit_series_plot_file(
+                                                op_name, "dElab", "pdf", range_key
+                                            )
                                         )
-                                    elif os.path.exists(self.proj_files_handler.corr_fit_series_plot_file(op_name, "dElab", "pdf", range_key, 'combined')):
+                                        or ctype == "sh"
+                                    ):
                                         plh.include_additional_plots(
                                             elab_file,
-                                            self.proj_files_handler.corr_fit_series_plot_file(op_name, "dElab", "pdf", range_key, 'combined')
+                                            self.proj_files_handler.corr_fit_series_plot_file(
+                                                op_name, "dElab", "pdf", range_key
+                                            ),
+                                        )
+                                    elif os.path.exists(
+                                        self.proj_files_handler.corr_fit_series_plot_file(
+                                            op_name,
+                                            "dElab",
+                                            "pdf",
+                                            range_key,
+                                            "combined",
+                                        )
+                                    ):
+                                        plh.include_additional_plots(
+                                            elab_file,
+                                            self.proj_files_handler.corr_fit_series_plot_file(
+                                                op_name,
+                                                "dElab",
+                                                "pdf",
+                                                range_key,
+                                                "combined",
+                                            ),
                                         )
                                         plh.add_single_plot(
-                                            self.proj_files_handler.corr_fit_series_plot_file(op_name, "dElab", "pdf", range_key, 'ratio_only')
+                                            self.proj_files_handler.corr_fit_series_plot_file(
+                                                op_name,
+                                                "dElab",
+                                                "pdf",
+                                                range_key,
+                                                "ratio_only",
+                                            )
                                         )
                                     else:  # no dElab plot
                                         plh.add_single_plot(elab_file)
@@ -1754,141 +2610,248 @@ class SigmondSpectrumFits:
                         if op in all_sim_fit_plots[channel]:
                             if all_sim_fit_plots[channel][op]:
                                 plh.add_plot_series(all_sim_fit_plots[channel][op])
-                            
-                    if self.other_params["compute_overlaps"] and channel in self.interacting_channels and ctype == 'int':
+
+                    if (
+                        self.other_params["compute_overlaps"]
+                        and channel in self.interacting_channels
+                        and ctype == "int"
+                    ):
                         if channel in self.zmags:
                             files = []
-                            for i,op in enumerate(self.zmags[channel]["ops"]):
-                                op_name = str(op).replace(" ","_")
-                                files.append(self.proj_files_handler.operator_overlaps_plot( op_name, "pdf"))
+                            for i, op in enumerate(self.zmags[channel]["ops"]):
+                                op_name = str(op).replace(" ", "_")
+                                files.append(
+                                    self.proj_files_handler.operator_overlaps_plot(
+                                        op_name, "pdf"
+                                    )
+                                )
                             # if all_op_overlap_plots[channel]:
                             plh.add_operator_overlaps(files)
-                            
+
                             try:
-                                ni_levels = self.other_params['non_interacting_levels'][str(channel)]
-                                ni_levels = [[str(x) for x in pair] for pair in ni_levels]
-                                if os.path.exists(self.proj_files_handler.ni_level_certainty_plot_file(str(channel), "pdf")):
-                                    plh.add_single_plot(self.proj_files_handler.ni_level_certainty_plot_file(str(channel), "pdf"))
+                                ni_levels = self.other_params["non_interacting_levels"][
+                                    str(channel)
+                                ]
+                                ni_levels = [
+                                    [str(x) for x in pair] for pair in ni_levels
+                                ]
+                                if os.path.exists(
+                                    self.proj_files_handler.ni_level_certainty_plot_file(
+                                        str(channel), "pdf"
+                                    )
+                                ):
+                                    plh.add_single_plot(
+                                        self.proj_files_handler.ni_level_certainty_plot_file(
+                                            str(channel), "pdf"
+                                        )
+                                    )
                             except KeyError:
                                 pass
 
-            #finalize summary plot
-            plh.compile_pdf(self.proj_files_handler.summary_file()) 
-            logging.info(f"Summary file saved to {self.proj_files_handler.summary_file()}.pdf")
-            
+            # finalize summary plot
+            plh.compile_pdf(self.proj_files_handler.summary_file())
+            logging.info(
+                f"Summary file saved to {self.proj_files_handler.summary_file()}.pdf"
+            )
+
     # #summary spectrum plot
-    def summary_spectrum_plot(self,plh):
-        all_levels = []; all_errs = []; all_indexes = []; xticks = []; all_ni_levels = []; all_ni_errs = []; all_ni_indexes = []
-        
+    def summary_spectrum_plot(self, plh):
+        all_levels = []
+        all_errs = []
+        all_indexes = []
+        xticks = []
+        all_ni_levels = []
+        all_ni_errs = []
+        all_ni_indexes = []
+
         # get unique non-interacting levels for each channel for summary plot
-        self.other_params['unique_non_interacting_levels'] = {channel: [list(unique_pair) for unique_pair in set(tuple(sorted(pair)) for pair in ni_pairs)]
-                                                            for channel, ni_pairs in self.other_params['non_interacting_levels'].items()}
-        if self.other_params['non_interacting_energy_sums']:
-            ref_ecm_energy = self.single_hadron_info[f"{self.other_params['reference_particle']}(0)"]["ecm"] if self.other_params['reference_particle'] else 1.0
-            self.spectrum_ni_dict = sigmond_util.get_possible_spectrum_ni_energies(self.other_params['unique_non_interacting_levels'], self.interacting_channels,
-                                                                                self.single_hadron_results, self.get_sh_operator,
-                                                                                   self.ensemble_info.getLatticeXExtent(), ref_ecm_energy)
+        self.other_params["unique_non_interacting_levels"] = {
+            channel: [
+                list(unique_pair)
+                for unique_pair in set(tuple(sorted(pair)) for pair in ni_pairs)
+            ]
+            for channel, ni_pairs in self.other_params["non_interacting_levels"].items()
+        }
+        if self.other_params["non_interacting_energy_sums"]:
+            ref_ecm_energy = (
+                self.single_hadron_info[
+                    f"{self.other_params['reference_particle']}(0)"
+                ]["ecm"]
+                if self.other_params["reference_particle"]
+                else 1.0
+            )
+            self.spectrum_ni_dict = sigmond_util.get_possible_spectrum_ni_energies(
+                self.other_params["unique_non_interacting_levels"],
+                self.interacting_channels,
+                self.single_hadron_results,
+                self.get_sh_operator,
+                self.ensemble_info.getLatticeXExtent(),
+                ref_ecm_energy,
+            )
 
-
-        if self.other_params['reference_particle']:
-            if f"{self.other_params['reference_particle']}(0)" in self.single_hadron_info:
+        if self.other_params["reference_particle"]:
+            if (
+                f"{self.other_params['reference_particle']}(0)"
+                in self.single_hadron_info
+            ):
                 energy_key = "ecm_ref"
             else:
                 energy_key = "ecm"
         else:
             energy_key = "ecm"
 
-        for i,channel in enumerate(self.interacting_channels):
-            levels = []; errs = []
+        for i, channel in enumerate(self.interacting_channels):
+            levels = []
+            errs = []
             for op in self.results[channel]:
                 if self.results[channel][op]["success"]:
-                    levels.append(self.results[channel][op][energy_key].getFullEstimate())
-                    errs.append(self.results[channel][op][energy_key].getSymmetricError())
-            
-            index = [i]*len(levels)
-            all_levels+=levels; all_errs+=errs; all_indexes+=index
-            xticks+=[(channel.irrep,channel.psq)]
-            
+                    levels.append(
+                        self.results[channel][op][energy_key].getFullEstimate()
+                    )
+                    errs.append(
+                        self.results[channel][op][energy_key].getSymmetricError()
+                    )
+
+            index = [i] * len(levels)
+            all_levels += levels
+            all_errs += errs
+            all_indexes += index
+            xticks += [(channel.irrep, channel.psq)]
+
             # NI_lower_limit = (3*min(levels) - max(levels))/2 # lower limit for not including NI sums (pretty arbitrary)
-            
-        
-            if self.other_params['non_interacting_energy_sums']:
+
+            if self.other_params["non_interacting_energy_sums"]:
                 ni_data = np.array(self.spectrum_ni_dict[str(channel)][energy_key])
                 # ni_data = ni_data[ni_data[:, 0]>NI_lower_limit] # remove NI sums below lower limit
-                all_ni_levels+=list(ni_data[:, 0]); all_ni_errs+=list(ni_data[:, 1]); all_ni_indexes += [i]*len(ni_data)
-
-            
+                all_ni_levels += list(ni_data[:, 0])
+                all_ni_errs += list(ni_data[:, 1])
+                all_ni_indexes += [i] * len(ni_data)
 
         thresholds = []
         for line in self.other_params["thresholds"]:
             value = 0.0
             for particle in line:
-                value+=self.single_hadron_info[particle+"(0)"][energy_key]
+                value += self.single_hadron_info[particle + "(0)"][energy_key]
             thresholds.append((line, value))
 
         if all_indexes:
-            plh.summary_plot(all_indexes,all_levels,all_errs,xticks,self.other_params['reference_particle'],thresholds,
-                             ni_indexes=all_ni_indexes, ni_levels=all_ni_levels, ni_errs=all_ni_errs)
-            if self.other_params['create_pickles']:
+            plh.summary_plot(
+                all_indexes,
+                all_levels,
+                all_errs,
+                xticks,
+                self.other_params["reference_particle"],
+                thresholds,
+                ni_indexes=all_ni_indexes,
+                ni_levels=all_ni_levels,
+                ni_errs=all_ni_errs,
+            )
+            if self.other_params["create_pickles"]:
                 plh.save_pickle(self.proj_files_handler.summary_plot_file("pickle"))
-            if self.other_params['create_pdfs'] or self.other_params['create_summary']:
+            if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
                 plh.save_pdf(self.proj_files_handler.summary_plot_file("pdf"))
-                
-    def summary_dElab_spectrum_plot(self,plh,max_levels=None,color_coded=False,certainties=False):
-        all_levels = []; all_errs = []; all_indexes = []; all_certainties_list = []; xticks = [];     
+
+    def summary_dElab_spectrum_plot(
+        self, plh, max_levels=None, color_coded=False, certainties=False
+    ):
+        all_levels = []
+        all_errs = []
+        all_indexes = []
+        all_certainties_list = []
+        xticks = []
         certainty_threshold = 0.6
-        if self.other_params['reference_particle']:
-            if f"{self.other_params['reference_particle']}(0)" in self.single_hadron_info:
+        if self.other_params["reference_particle"]:
+            if (
+                f"{self.other_params['reference_particle']}(0)"
+                in self.single_hadron_info
+            ):
                 energy_key = "dElab_ref"
             else:
                 energy_key = "dElab"
         else:
             energy_key = "dElab"
-            
-        for i,channel in enumerate(self.interacting_channels):
-            levels = []; errs = []; elab_results = []; certainties_list = []
+
+        for i, channel in enumerate(self.interacting_channels):
+            levels = []
+            errs = []
+            elab_results = []
+            certainties_list = []
 
             if max_levels is None:
                 max_levels_plot = len(self.results[channel])
             else:
                 max_levels_plot = max_levels
-                
+
             for level_idx, op in enumerate(self.results[channel]):
                 if self.results[channel][op]["success"]:
-                    elab_results.append(self.results[channel][op]["elab"].getFullEstimate())
+                    elab_results.append(
+                        self.results[channel][op]["elab"].getFullEstimate()
+                    )
 
                     try:
-                        levels.append(self.results[channel][op][energy_key].getFullEstimate())
-                        errs.append(self.results[channel][op][energy_key].getSymmetricError())
+                        levels.append(
+                            self.results[channel][op][energy_key].getFullEstimate()
+                        )
+                        errs.append(
+                            self.results[channel][op][energy_key].getSymmetricError()
+                        )
                     except KeyError:
-                        logging.warning(f"Could not find {energy_key} for {str(op)} in {channel}")
+                        logging.warning(
+                            f"Could not find {energy_key} for {str(op)} in {channel}"
+                        )
                     if certainties:
-                        if self.assignment_certainty[channel][level_idx]['combined_certainty'] > certainty_threshold:
+                        if (
+                            self.assignment_certainty[channel][level_idx][
+                                "combined_certainty"
+                            ]
+                            > certainty_threshold
+                        ):
                             certainties_list.append(True)
                         else:
                             certainties_list.append(False)
-            
-            # sort levels by elab value 
+
+            # sort levels by elab value
             if color_coded:
-                _, levels, errs, certainties_list = zip(*sorted(zip(elab_results, levels, errs, certainties_list)))
+                _, levels, errs, certainties_list = zip(
+                    *sorted(zip(elab_results, levels, errs, certainties_list))
+                )
             levels = levels[:max_levels_plot]
             errs = errs[:max_levels_plot]
             certainties_list = certainties_list[:max_levels_plot]
-                
-            index = [i]*len(levels)
-            all_levels+=levels; all_errs+=errs; all_indexes+=index; all_certainties_list+=certainties_list
-            xticks+=[(channel.irrep,channel.psq)]
+
+            index = [i] * len(levels)
+            all_levels += levels
+            all_errs += errs
+            all_indexes += index
+            all_certainties_list += certainties_list
+            xticks += [(channel.irrep, channel.psq)]
 
         if all_indexes:
-            plh.summary_plot(all_indexes,all_levels,all_errs,xticks,self.other_params['reference_particle'],
-                             shift=True, color_coded=color_coded, certain_bool_list=all_certainties_list)
+            plh.summary_plot(
+                all_indexes,
+                all_levels,
+                all_errs,
+                xticks,
+                self.other_params["reference_particle"],
+                shift=True,
+                color_coded=color_coded,
+                certain_bool_list=all_certainties_list,
+            )
             tag = f"max_{max_levels}" if max_levels else ""
-            if self.other_params['create_pickles']:
-                plh.save_pickle(self.proj_files_handler.summary_dElab_plot_file("pickle", filetag=tag))
-            if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-                plh.save_pdf(self.proj_files_handler.summary_dElab_plot_file("pdf", filetag=tag))
-                
-    def tmin_fit_plot(self, plh, energy_type, results, channel, op, op_name, tmin_plot=True):
+            if self.other_params["create_pickles"]:
+                plh.save_pickle(
+                    self.proj_files_handler.summary_dElab_plot_file(
+                        "pickle", filetag=tag
+                    )
+                )
+            if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
+                plh.save_pdf(
+                    self.proj_files_handler.summary_dElab_plot_file("pdf", filetag=tag)
+                )
+
+    def tmin_fit_plot(
+        self, plh, energy_type, results, channel, op, op_name, tmin_plot=True
+    ):
         plh.clf()
         sim_fits = {}  # sh, model, tmin, estimate
 
@@ -1907,34 +2870,96 @@ class SigmondSpectrumFits:
 
         # Get list of models
         models = list(fit_series_results[channel][op]["fits"].keys())
-        ratio_models = [m for m in models if 'ratio' in m]
+        ratio_models = [m for m in models if "ratio" in m]
         has_ratio_model = len(ratio_models) > 0
-        other_models = [m for m in models if m != '1-exp-ratio']
+        other_models = [m for m in models if m != "1-exp-ratio"]
         has_other_models = len(other_models) > 0
 
         if energy_type in results[op]:
             if has_ratio_model and has_other_models and energy_type == "dElab":
                 # Generate combined plot with both ratio and other models
                 models_to_plot = models
-                self._generate_plot(plh, energy_type, results, fit_series_results, channel, op, op_name, tmin_plot,
-                                    models_to_plot, sim_fits, hadrons, species, mom, plot_suffix="_combined", plot_label="Combined")
+                self._generate_plot(
+                    plh,
+                    energy_type,
+                    results,
+                    fit_series_results,
+                    channel,
+                    op,
+                    op_name,
+                    tmin_plot,
+                    models_to_plot,
+                    sim_fits,
+                    hadrons,
+                    species,
+                    mom,
+                    plot_suffix="_combined",
+                    plot_label="Combined",
+                )
 
                 # Generate plot with only ratio model
                 models_to_plot = ratio_models
-                self._generate_plot(plh, energy_type, results, fit_series_results, channel, op, op_name, tmin_plot,
-                                    models_to_plot, sim_fits, hadrons, species, mom, plot_suffix="_ratio_only", plot_label="Ratio Only")
+                self._generate_plot(
+                    plh,
+                    energy_type,
+                    results,
+                    fit_series_results,
+                    channel,
+                    op,
+                    op_name,
+                    tmin_plot,
+                    models_to_plot,
+                    sim_fits,
+                    hadrons,
+                    species,
+                    mom,
+                    plot_suffix="_ratio_only",
+                    plot_label="Ratio Only",
+                )
             else:
                 # Proceed as before with all models
                 models_to_plot = models
-                self._generate_plot(plh, energy_type, results, fit_series_results, channel, op, op_name, tmin_plot,
-                                    models_to_plot, sim_fits, hadrons, species, mom)
+                self._generate_plot(
+                    plh,
+                    energy_type,
+                    results,
+                    fit_series_results,
+                    channel,
+                    op,
+                    op_name,
+                    tmin_plot,
+                    models_to_plot,
+                    sim_fits,
+                    hadrons,
+                    species,
+                    mom,
+                )
         return sim_fits
-    
-    def _generate_plot(self, plh, energy_type, results, fit_series_results, channel, op, op_name, tmin_plot,
-                   models_to_plot, sim_fits, hadrons, species, mom, plot_suffix="", plot_label=""):
+
+    def _generate_plot(
+        self,
+        plh,
+        energy_type,
+        results,
+        fit_series_results,
+        channel,
+        op,
+        op_name,
+        tmin_plot,
+        models_to_plot,
+        sim_fits,
+        hadrons,
+        species,
+        mom,
+        plot_suffix="",
+        plot_label="",
+    ):
         plh.clf()
         empty_plot = True
-        plh.add_chosen_fit(results[op][energy_type].getFullEstimate(), results[op][energy_type].getSymmetricError())
+        plh.add_chosen_fit(
+            results[op][energy_type].getFullEstimate(),
+            results[op][energy_type].getSymmetricError(),
+        )
 
         for i, model in enumerate(models_to_plot):
             if model not in fit_series_results[channel][op]["fits"]:
@@ -1943,8 +2968,10 @@ class SigmondSpectrumFits:
             energies = []
             energy_errs = []
             pvals = []
-            if '-sim' in model:
-                for sh in OrderedSet(self.other_params['non_interacting_levels'][str(channel)][op.level]):
+            if "-sim" in model:
+                for sh in OrderedSet(
+                    self.other_params["non_interacting_levels"][str(channel)][op.level]
+                ):
                     if sh not in sim_fits:
                         sim_fits[sh] = {}
                     sim_fits[sh][model] = {"fit_vals": {}, "pval": {}, "color": i}
@@ -1954,25 +2981,46 @@ class SigmondSpectrumFits:
                     energies.append(val[energy_type].getFullEstimate())
                     energy_errs.append(val[energy_type].getSymmetricError())
                     pvals.append(val["qual"])
-                    if '-sim' in model:
+                    if "-sim" in model:
                         if model == "2-exp-sim":
-                            init_param = fit_series_results[channel][op]["fits"][model]["info"].num_params
+                            init_param = fit_series_results[channel][op]["fits"][model][
+                                "info"
+                            ].num_params
                             step_param = 3
-                        for sh in OrderedSet(self.other_params['non_interacting_levels'][str(channel)][op.level]):
-                            sim_fits[sh][model]["fit_vals"][tmin] = val["estimates"][init_param]
+                        for sh in OrderedSet(
+                            self.other_params["non_interacting_levels"][str(channel)][
+                                op.level
+                            ]
+                        ):
+                            sim_fits[sh][model]["fit_vals"][tmin] = val["estimates"][
+                                init_param
+                            ]
                             sim_fits[sh][model]["pval"][tmin] = val["qual"]
                             init_param += step_param
             if tmins:
                 empty_plot = False
-                sort_data = sorted(zip(tmins, energies, energy_errs, pvals), key=lambda x: x[-1])
-                split = next((index for index, data in enumerate(sort_data) if data[-1] >= 0.1), len(sort_data))
+                sort_data = sorted(
+                    zip(tmins, energies, energy_errs, pvals), key=lambda x: x[-1]
+                )
+                split = next(
+                    (index for index, data in enumerate(sort_data) if data[-1] >= 0.1),
+                    len(sort_data),
+                )
                 if sort_data[:split]:
                     label = None if sort_data[split:] else model
-                    tmins_poor, energies_poor, energy_errs_poor, _ = zip(*sort_data[:split])
-                    plh.add_fit_series(tmins_poor, energies_poor, energy_errs_poor, i, False, label)
+                    tmins_poor, energies_poor, energy_errs_poor, _ = zip(
+                        *sort_data[:split]
+                    )
+                    plh.add_fit_series(
+                        tmins_poor, energies_poor, energy_errs_poor, i, False, label
+                    )
                 if sort_data[split:]:
-                    tmins_good, energies_good, energy_errs_good, _ = zip(*sort_data[split:])
-                    plh.add_fit_series(tmins_good, energies_good, energy_errs_good, i, True, model)
+                    tmins_good, energies_good, energy_errs_good, _ = zip(
+                        *sort_data[split:]
+                    )
+                    plh.add_fit_series(
+                        tmins_good, energies_good, energy_errs_good, i, True, model
+                    )
 
         series_type = "min" if tmin_plot else "max"
         if not empty_plot:
@@ -1980,86 +3028,136 @@ class SigmondSpectrumFits:
             if hadrons != 1:
                 irrep = psettings.latex_format[channel.irrep]
                 label = f"{irrep}({mom}) level {op.level} "
-                if self.other_params['non_interacting_levels']:
-                    for sh in self.other_params['non_interacting_levels'][str(channel)][op.level]:
-                        label += sh.replace(sh.split('(')[0], psettings.latex_format[sh.split('(')[0]])
+                if self.other_params["non_interacting_levels"]:
+                    for sh in self.other_params["non_interacting_levels"][str(channel)][
+                        op.level
+                    ]:
+                        label += sh.replace(
+                            sh.split("(")[0], psettings.latex_format[sh.split("(")[0]]
+                        )
 
             if plot_label:
                 label = f"{label} {plot_label}"
-            plh.finalize_fit_series_plot(series_type, label, ratio=(energy_type == "dElab"), species=species)
+            plh.finalize_fit_series_plot(
+                series_type, label, ratio=(energy_type == "dElab"), species=species
+            )
 
             # Adjust file names with plot_suffix
-            filename_pickle = self.proj_files_handler.corr_fit_series_plot_file(op_name, energy_type, "pickle", 't' + series_type + plot_suffix)
-            filename_pdf = self.proj_files_handler.corr_fit_series_plot_file(op_name, energy_type, "pdf", 't' + series_type + plot_suffix)
+            filename_pickle = self.proj_files_handler.corr_fit_series_plot_file(
+                op_name, energy_type, "pickle", "t" + series_type + plot_suffix
+            )
+            filename_pdf = self.proj_files_handler.corr_fit_series_plot_file(
+                op_name, energy_type, "pdf", "t" + series_type + plot_suffix
+            )
 
-            if self.other_params['create_pickles']:
+            if self.other_params["create_pickles"]:
                 plh.save_pickle(filename_pickle)
-            if self.other_params['create_pdfs'] or self.other_params['create_summary']:
+            if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
                 plh.save_pdf(filename_pdf)
         else:
             # Remove existing files if plot is empty
-            filename_pickle = self.proj_files_handler.corr_fit_series_plot_file(op_name, energy_type, "pickle", 't' + series_type + plot_suffix)
-            filename_pdf = self.proj_files_handler.corr_fit_series_plot_file(op_name, energy_type, "pdf", 't' + series_type + plot_suffix)
+            filename_pickle = self.proj_files_handler.corr_fit_series_plot_file(
+                op_name, energy_type, "pickle", "t" + series_type + plot_suffix
+            )
+            filename_pdf = self.proj_files_handler.corr_fit_series_plot_file(
+                op_name, energy_type, "pdf", "t" + series_type + plot_suffix
+            )
             if os.path.exists(filename_pickle):
                 os.remove(filename_pickle)
             if os.path.exists(filename_pdf):
                 os.remove(filename_pdf)
 
-    #check that model, tmin, and tmax are specified in all default fit configurations
+    # check that model, tmin, and tmax are specified in all default fit configurations
     def check_fit_inputs(self, fit_input, task_configs, fit_input_name):
-        
-        for item in ['model','tmin','tmax']:
+
+        for item in ["model", "tmin", "tmax"]:
             if item not in fit_input:
-                logging.error(f"Parameter '{item}' missing from {fit_input_name} input.")
+                logging.error(
+                    f"Parameter '{item}' missing from {fit_input_name} input."
+                )
 
         for param, setting in self.default_fit_params.items():
             if param not in fit_input:
                 sfit_input = setting
                 task_configs[fit_input_name][param] = setting
 
-    #sets up tmin or tmax plot for fits that were done in parallel to the central correlator
-    def sim_tmin_plot(self, sh,sh_tmin, op_name, plh, ind_fit_estimate, tmin_plot = True):
+    # sets up tmin or tmax plot for fits that were done in parallel to the central correlator
+    def sim_tmin_plot(
+        self, sh, sh_tmin, op_name, plh, ind_fit_estimate, tmin_plot=True
+    ):
         plh.clf()
-        plh.add_chosen_fit(ind_fit_estimate.getFullEstimate(), ind_fit_estimate.getSymmetricError(), "Ind. fit")
+        plh.add_chosen_fit(
+            ind_fit_estimate.getFullEstimate(),
+            ind_fit_estimate.getSymmetricError(),
+            "Ind. fit",
+        )
         for model in sh_tmin:
             tmins = list(sh_tmin[model]["fit_vals"].keys())
             energy_est = list(sh_tmin[model]["fit_vals"].values())
             pvals = list(sh_tmin[model]["pval"].values())
             energies = [en.getFullEstimate() for en in energy_est]
             energy_errs = [en.getSymmetricError() for en in energy_est]
-            
+
             sort_data = list(zip(tmins, energies, energy_errs, pvals))
             sort_data.sort(key=lambda x: x[-1])
             if sort_data:
                 for split, data in enumerate(sort_data):
-                    if data[-1]>=0.1:
+                    if data[-1] >= 0.1:
                         break
                 if sort_data[:split]:
                     label = None
                     if not sort_data[split:]:
-                        label=model
-                    tmins, energies, energy_errs, pvals = list(zip(*sort_data[:split])) #poor pval
-                    plh.add_fit_series(tmins, energies, energy_errs, sh_tmin[model]["color"], False, label)
+                        label = model
+                    tmins, energies, energy_errs, pvals = list(
+                        zip(*sort_data[:split])
+                    )  # poor pval
+                    plh.add_fit_series(
+                        tmins,
+                        energies,
+                        energy_errs,
+                        sh_tmin[model]["color"],
+                        False,
+                        label,
+                    )
                 if sort_data[split:]:
-                    tmins, energies, energy_errs, pvals = list(zip(*sort_data[split:])) #good pval
-                    plh.add_fit_series(tmins, energies, energy_errs, sh_tmin[model]["color"], True, model)
-            
+                    tmins, energies, energy_errs, pvals = list(
+                        zip(*sort_data[split:])
+                    )  # good pval
+                    plh.add_fit_series(
+                        tmins,
+                        energies,
+                        energy_errs,
+                        sh_tmin[model]["color"],
+                        True,
+                        model,
+                    )
+
         if tmin_plot:
             series_type = "min"
-        else: 
+        else:
             series_type = "max"
-        plh.finalize_fit_series_plot(series_type,title=f"{sh}")
-        if self.other_params['create_pickles']:
-            plh.save_pickle(self.proj_files_handler.corr_fit_series_plot_file( f"{op_name}-{sh}", "dElab", "pickle",'t'+series_type))
-        if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-            plh.save_pdf(self.proj_files_handler.corr_fit_series_plot_file( f"{op_name}-{sh}", "dElab", "pdf",'t'+series_type))
+        plh.finalize_fit_series_plot(series_type, title=f"{sh}")
+        if self.other_params["create_pickles"]:
+            plh.save_pickle(
+                self.proj_files_handler.corr_fit_series_plot_file(
+                    f"{op_name}-{sh}", "dElab", "pickle", "t" + series_type
+                )
+            )
+        if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
+            plh.save_pdf(
+                self.proj_files_handler.corr_fit_series_plot_file(
+                    f"{op_name}-{sh}", "dElab", "pdf", "t" + series_type
+                )
+            )
             # logging.info("Generated sim tmin plot: "+self.corr_fit_series_plot_file( f"{op_name}-{sh}", "dElab", "pdf"))
-        return(self.proj_files_handler.corr_fit_series_plot_file( f"{op_name}-{sh}", "dElab", "pdf",'t'+series_type))
-    
-    #for a given channel, generate all the operator overlap plots
+        return self.proj_files_handler.corr_fit_series_plot_file(
+            f"{op_name}-{sh}", "dElab", "pdf", "t" + series_type
+        )
+
+    # for a given channel, generate all the operator overlap plots
     def generate_operator_overlaps_plots(self, channel, plh):
-        for i,op in enumerate(self.zmags[channel]["ops"]):
-            op_name = str(op).replace(" ","_")
+        for i, op in enumerate(self.zmags[channel]["ops"]):
+            op_name = str(op).replace(" ", "_")
             if op.isBasicLapH():
                 oppiece = op.getBasicLapH().getIDName()
             else:
@@ -2067,47 +3165,78 @@ class SigmondSpectrumFits:
             estimates = []
             errors = []
             for j in range(self.zmags[channel]["nlevels"]):
-                zmag = self.zmags[channel]["zmags"].get(i,j)
+                zmag = self.zmags[channel]["zmags"].get(i, j)
                 estimates.append(zmag.getFullEstimate())
                 errors.append(zmag.getSymmetricError())
             plh.clf()
-                      
-            plh.plot_operator_overlaps(estimates,errors,oppiece)
-            if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-                plh.save_pdf(self.proj_files_handler.operator_overlaps_plot( op_name, "pdf"))
-            if self.other_params['create_pickles']:
+
+            plh.plot_operator_overlaps(estimates, errors, oppiece)
+            if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
+                plh.save_pdf(
+                    self.proj_files_handler.operator_overlaps_plot(op_name, "pdf")
+                )
+            if self.other_params["create_pickles"]:
                 for i in range(10):
                     try:
-                        plh.save_pickle(self.proj_files_handler.operator_overlaps_plot( op_name, "pickle"))
+                        plh.save_pickle(
+                            self.proj_files_handler.operator_overlaps_plot(
+                                op_name, "pickle"
+                            )
+                        )
                         break
                     except RuntimeError as err:
-                        logging.warning(f"Runtime error when saving pickle of overlaps: {err}.")
+                        logging.warning(
+                            f"Runtime error when saving pickle of overlaps: {err}."
+                        )
 
     def generate_ni_level_certainty_plot(self, channel, plh):
-        ni_levels = self.other_params['non_interacting_levels'][str(channel)]
-        certainties = [certainty_dict['combined_certainty'] for certainty_dict in self.assignment_certainty[channel]]
+        ni_levels = self.other_params["non_interacting_levels"][str(channel)]
+        certainties = [
+            certainty_dict["combined_certainty"]
+            for certainty_dict in self.assignment_certainty[channel]
+        ]
         plh.clf()
         current_figsize = (plh.figwidth, plh.figheight)
         # Make plot a bit taller
         plh.set_figsize(18, 10)
         plh.plot_ni_level_certainty(ni_levels, certainties)
-        
-        if self.other_params['create_pdfs'] or self.other_params['create_summary']:
-                plh.save_pdf(self.proj_files_handler.ni_level_certainty_plot_file( str(channel), "pdf"))
-        if self.other_params['create_pickles']:
+
+        if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
+            plh.save_pdf(
+                self.proj_files_handler.ni_level_certainty_plot_file(
+                    str(channel), "pdf"
+                )
+            )
+        if self.other_params["create_pickles"]:
             for i in range(10):
                 try:
-                    plh.save_pickle(self.proj_files_handler.ni_level_certainty_plot_file( str(channel), "pickle"))
+                    plh.save_pickle(
+                        self.proj_files_handler.ni_level_certainty_plot_file(
+                            str(channel), "pickle"
+                        )
+                    )
                     break
                 except RuntimeError as err:
-                    logging.warning(f"Runtime error when saving pickle of NI certainty levels: {err}.")
-                    
-        plh.set_figsize(*current_figsize) # Reset figsize
+                    logging.warning(
+                        f"Runtime error when saving pickle of NI certainty levels: {err}."
+                    )
 
-    
-    #for a given operator, complete the fit and tmin variation fits and store relevant info into memory
-    def do_fits( self, results, channel, intop, this_fit_input, wmode, param_file, hadrons, tmin_results, tmax_results):
-        #chosen fit
+        plh.set_figsize(*current_figsize)  # Reset figsize
+
+    # for a given operator, complete the fit and tmin variation fits and store relevant info into memory
+    def do_fits(
+        self,
+        results,
+        channel,
+        intop,
+        this_fit_input,
+        wmode,
+        param_file,
+        hadrons,
+        tmin_results,
+        tmax_results,
+    ):
+        # chosen fit
         task_input = sigmond_input.SigmondInput(
             os.path.basename(self.project_handler.project_info.project_dir),
             self.project_handler.project_info.bins_info,
@@ -2115,44 +3244,86 @@ class SigmondSpectrumFits:
             self.project_handler.project_info.ensembles_file,
             self.data_files,
             self.fit_input_file(intop),
-            os.path.join(self.proj_files_handler.log_dir(), "sigmond_spectrum_log.xml"),  # actually creating this
-            self.other_params['precompute'],
+            os.path.join(
+                self.proj_files_handler.log_dir(), "sigmond_spectrum_log.xml"
+            ),  # actually creating this
+            self.other_params["precompute"],
             None,
         )
         results[channel][intop] = {}
         fitenergy_obs_info = None
         fitamp_obs_info = None
-        model=this_fit_input['model']
+        model = this_fit_input["model"]
         scat_info = []
         sh_priors = {}
-        obs_energy_tags = ['ecm', 'elab']
-        
+        obs_energy_tags = ["ecm", "elab"]
+
         if this_fit_input["sim_fit"]:
-            model+="-sim"
-            if not self.set_up_sim_fit(this_fit_input, model, scat_info, sh_priors, channel, intop):
+            model += "-sim"
+            if not self.set_up_sim_fit(
+                this_fit_input, model, scat_info, sh_priors, channel, intop
+            ):
                 results[channel][intop]["success"] = False
                 return
             scat_info_initial = scat_info[0]
-        
-        if model!='multi-exp':
-            this_fit_input['model'] = fit_info.FitModel(this_fit_input['model'])
+
+        if model != "multi-exp":
+            this_fit_input["model"] = fit_info.FitModel(this_fit_input["model"])
         try:
-            if self.other_params['minimizer_info']['minimizer']=='lmder':
-                if model!='multi-exp':
-                    this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.sigmond_fit(task_input, intop, self.other_params['minimizer_info'], this_fit_input, self.mcobs_handler, 
-                                                    self.project_handler.project_info.sampling_info.getSamplingMode(), self.project_handler.subtract_vev, self.fit_log_file(intop), False,
-                                                    sh_priors, scat_info)
+            if self.other_params["minimizer_info"]["minimizer"] == "lmder":
+                if model != "multi-exp":
+                    this_fit_info, these_fit_results, chisqr, qual, dof = (
+                        sigmond_util.sigmond_fit(
+                            task_input,
+                            intop,
+                            self.other_params["minimizer_info"],
+                            this_fit_input,
+                            self.mcobs_handler,
+                            self.project_handler.project_info.sampling_info.getSamplingMode(),
+                            self.project_handler.subtract_vev,
+                            self.fit_log_file(intop),
+                            False,
+                            sh_priors,
+                            scat_info,
+                        )
+                    )
                 else:
                     multi_exp_input = {}
                     multi_exp_input.update(this_fit_input)
-                    multi_exp_input['tmin'] = 2
-                    this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.sigmond_multi_exp_fit(task_input, intop, self.other_params['minimizer_info'], multi_exp_input, self.mcobs_handler, 
-                                        self.project_handler.project_info.sampling_info.getSamplingMode(), self.project_handler.subtract_vev, self.fit_log_file(intop), False)
+                    multi_exp_input["tmin"] = 2
+                    this_fit_info, these_fit_results, chisqr, qual, dof = (
+                        sigmond_util.sigmond_multi_exp_fit(
+                            task_input,
+                            intop,
+                            self.other_params["minimizer_info"],
+                            multi_exp_input,
+                            self.mcobs_handler,
+                            self.project_handler.project_info.sampling_info.getSamplingMode(),
+                            self.project_handler.subtract_vev,
+                            self.fit_log_file(intop),
+                            False,
+                        )
+                    )
             else:
-                nsamplings = self.project_handler.project_info.sampling_info.getNumberOfReSamplings(self.project_handler.project_info.bins_info)
-                this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.scipy_fit(intop, self.other_params['minimizer_info'], this_fit_input, self.mcobs_handler, 
-                                                self.project_handler.subtract_vev, self.project_handler.hermitian, self.ensemble_info.getLatticeTimeExtent(),
-                                                self.project_handler.nodes, nsamplings, False, sh_priors, scat_info)
+                nsamplings = self.project_handler.project_info.sampling_info.getNumberOfReSamplings(
+                    self.project_handler.project_info.bins_info
+                )
+                this_fit_info, these_fit_results, chisqr, qual, dof = (
+                    sigmond_util.scipy_fit(
+                        intop,
+                        self.other_params["minimizer_info"],
+                        this_fit_input,
+                        self.mcobs_handler,
+                        self.project_handler.subtract_vev,
+                        self.project_handler.hermitian,
+                        self.ensemble_info.getLatticeTimeExtent(),
+                        self.project_handler.nodes,
+                        nsamplings,
+                        False,
+                        sh_priors,
+                        scat_info,
+                    )
+                )
 
             # write but suppress logging output
             with sigmond_util.suppress_output():
@@ -2164,71 +3335,125 @@ class SigmondSpectrumFits:
             results[channel][intop]["chisqrdof"] = float(chisqr)
             results[channel][intop]["qual"] = float(qual)
             results[channel][intop]["dof"] = int(dof)
-            fitenergy_obs_info = this_fit_info.energy_observable 
+            fitenergy_obs_info = this_fit_info.energy_observable
             fitamp_obs_info = this_fit_info.amplitude_observable
 
-            #set up MCObsInfo for important quantities
-            delab_obs_info = this_fit_info.fit_param_obs(this_fit_info.num_params+Obs.dElab.value) 
-            elab_obs_info = this_fit_info.fit_param_obs(this_fit_info.num_params+Obs.elab.value)
-            ecm_obs_info = this_fit_info.fit_param_obs(this_fit_info.num_params+Obs.ecm.value)
-            amp_obs_info = this_fit_info.fit_param_obs(this_fit_info.num_params+Obs.amp.value) 
-
-
+            # set up MCObsInfo for important quantities
+            delab_obs_info = this_fit_info.fit_param_obs(
+                this_fit_info.num_params + Obs.dElab.value
+            )
+            elab_obs_info = this_fit_info.fit_param_obs(
+                this_fit_info.num_params + Obs.elab.value
+            )
+            ecm_obs_info = this_fit_info.fit_param_obs(
+                this_fit_info.num_params + Obs.ecm.value
+            )
+            amp_obs_info = this_fit_info.fit_param_obs(
+                this_fit_info.num_params + Obs.amp.value
+            )
 
             if "non_interacting_level" in this_fit_input:
                 this_ni_level = this_fit_input["non_interacting_level"]
                 if this_fit_info.sim_fit:
-                    if scat_info[0]!=scat_info_initial:
-                        self.other_params['non_interacting_levels'][str(channel)][intop.level].reverse()
-                    this_ni_level = get_sim_ni_level(this_fit_input["non_interacting_level"],this_fit_info.obs_name,scat_info)
+                    if scat_info[0] != scat_info_initial:
+                        self.other_params["non_interacting_levels"][str(channel)][
+                            intop.level
+                        ].reverse()
+                    this_ni_level = get_sim_ni_level(
+                        this_fit_input["non_interacting_level"],
+                        this_fit_info.obs_name,
+                        scat_info,
+                    )
 
             if this_fit_info.ratio:
-                obs_energy_tags.append('dElab')
-                #compute ecm and elab
+                obs_energy_tags.append("dElab")
+                # compute ecm and elab
                 # turns fitenergy to delab (since same in ratio)
-                sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler,[fitenergy_obs_info],[1.0],delab_obs_info)
+                sigmond.doLinearSuperpositionBySamplings(
+                    self.mcobs_handler, [fitenergy_obs_info], [1.0], delab_obs_info
+                )
 
                 Nx = self.ensemble_info.getLatticeXExtent()
                 factor = 6.2831853071795864770
-                mom_factor = factor*factor/Nx/Nx
-                ni_levels = [(sh,mom*mom_factor) for sh,mom in this_ni_level]
-                sigmond.doReconstructEnergyBySamplings(self.mcobs_handler,delab_obs_info,ni_levels,elab_obs_info)
-                
-                results[channel][intop]["elab"] = self.mcobs_handler.getEstimate(elab_obs_info)
+                mom_factor = factor * factor / Nx / Nx
+                ni_levels = [(sh, mom * mom_factor) for sh, mom in this_ni_level]
+                sigmond.doReconstructEnergyBySamplings(
+                    self.mcobs_handler, delab_obs_info, ni_levels, elab_obs_info
+                )
 
-                results[channel][intop]["dElab"] = these_fit_results[this_fit_info.energy_index]
+                results[channel][intop]["elab"] = self.mcobs_handler.getEstimate(
+                    elab_obs_info
+                )
 
-                ni_levels = [self.single_hadron_info[sh]["amp_obs"] for sh in self.other_params["non_interacting_levels"][str(channel)][intop.level]]
-                sigmond.doReconstructAmplitudeBySamplings(self.mcobs_handler, fitamp_obs_info,ni_levels,amp_obs_info)
+                results[channel][intop]["dElab"] = these_fit_results[
+                    this_fit_info.energy_index
+                ]
+
+                ni_levels = [
+                    self.single_hadron_info[sh]["amp_obs"]
+                    for sh in self.other_params["non_interacting_levels"][str(channel)][
+                        intop.level
+                    ]
+                ]
+                sigmond.doReconstructAmplitudeBySamplings(
+                    self.mcobs_handler, fitamp_obs_info, ni_levels, amp_obs_info
+                )
             else:
-                #compute dElab if possible
-                results[channel][intop]["elab"] = these_fit_results[this_fit_info.energy_index]
+                # compute dElab if possible
+                results[channel][intop]["elab"] = these_fit_results[
+                    this_fit_info.energy_index
+                ]
 
-                sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler,[fitenergy_obs_info],[1.0],elab_obs_info)
-                sigmond.doLinearSuperpositionBySamplings(self.mcobs_handler,[fitamp_obs_info],[1.0],amp_obs_info)
+                sigmond.doLinearSuperpositionBySamplings(
+                    self.mcobs_handler, [fitenergy_obs_info], [1.0], elab_obs_info
+                )
+                sigmond.doLinearSuperpositionBySamplings(
+                    self.mcobs_handler, [fitamp_obs_info], [1.0], amp_obs_info
+                )
                 if "non_interacting_level" in this_fit_input:
-                    obs_energy_tags.append('dElab')
-                    Nx = self.ensemble_info.getLatticeXExtent() #assuming Nx=Ny=Nz
-                    factor = 6.2831853071795864770 
-                    ni_levels = [(sh,mom*factor*factor/Nx/Nx) for sh,mom in this_ni_level]
-                    #compute delab
-                    sigmond.doEnergyDifferenceBySamplings(self.mcobs_handler,elab_obs_info,ni_levels,delab_obs_info)
-                    results[channel][intop]["dElab"] = self.mcobs_handler.getEstimate(delab_obs_info)
+                    obs_energy_tags.append("dElab")
+                    Nx = self.ensemble_info.getLatticeXExtent()  # assuming Nx=Ny=Nz
+                    factor = 6.2831853071795864770
+                    ni_levels = [
+                        (sh, mom * factor * factor / Nx / Nx)
+                        for sh, mom in this_ni_level
+                    ]
+                    # compute delab
+                    sigmond.doEnergyDifferenceBySamplings(
+                        self.mcobs_handler, elab_obs_info, ni_levels, delab_obs_info
+                    )
+                    results[channel][intop]["dElab"] = self.mcobs_handler.getEstimate(
+                        delab_obs_info
+                    )
 
-                    #used correlated sim fit to construct the shift, but then use rest mass fit
-                        #and dispersion relation to shift back to elab
+                    # used correlated sim fit to construct the shift, but then use rest mass fit
+                    # and dispersion relation to shift back to elab
                     if this_fit_info.sim_fit:
-                        ni_levels = [(sh,mom*factor*factor/Nx/Nx) for sh,mom in this_fit_input["non_interacting_level"]]
-                        sigmond.doReconstructEnergyBySamplings(self.mcobs_handler,delab_obs_info,ni_levels,elab_obs_info)
-                        results[channel][intop]["elab"] = self.mcobs_handler.getEstimate(elab_obs_info)
-            
-            if intop.channel.psq==0:
+                        ni_levels = [
+                            (sh, mom * factor * factor / Nx / Nx)
+                            for sh, mom in this_fit_input["non_interacting_level"]
+                        ]
+                        sigmond.doReconstructEnergyBySamplings(
+                            self.mcobs_handler, delab_obs_info, ni_levels, elab_obs_info
+                        )
+                        results[channel][intop]["elab"] = (
+                            self.mcobs_handler.getEstimate(elab_obs_info)
+                        )
+
+            if intop.channel.psq == 0:
                 results[channel][intop]["ecm"] = results[channel][intop]["elab"]
             else:
-                Nx = self.ensemble_info.getLatticeXExtent() #assuming Nx=Ny=Nz
+                Nx = self.ensemble_info.getLatticeXExtent()  # assuming Nx=Ny=Nz
                 factor = 6.2831853071795864770
-                sigmond.doBoostBySamplings(self.mcobs_handler,elab_obs_info,-intop.channel.psq*factor*factor/Nx/Nx,ecm_obs_info)
-                results[channel][intop]["ecm"] = self.mcobs_handler.getEstimate(ecm_obs_info)
+                sigmond.doBoostBySamplings(
+                    self.mcobs_handler,
+                    elab_obs_info,
+                    -intop.channel.psq * factor * factor / Nx / Nx,
+                    ecm_obs_info,
+                )
+                results[channel][intop]["ecm"] = self.mcobs_handler.getEstimate(
+                    ecm_obs_info
+                )
 
         except ValueError as err:
             logging.warning(f"Fit to {intop} failed: {err}.")
@@ -2237,67 +3462,73 @@ class SigmondSpectrumFits:
             logging.warning(f"Fit to {intop} failed: {err}.")
             results[channel][intop]["success"] = False
 
-        #save samplings to param file
+        # save samplings to param file
         if results[channel][intop]["success"]:
             obs_name = results[channel][intop]["info"].obs_name
             obs_infos = set()
             for i in range(results[channel][intop]["info"].num_params):
                 obs_id = results[channel][intop]["info"].obs_id(i)
-                obs_infos.add(sigmond.MCObsInfo(obs_name,obs_id))
+                obs_infos.add(sigmond.MCObsInfo(obs_name, obs_id))
 
             dummy = sigmond.XMLHandler("test")
-            self.mcobs_handler.writeSamplingValuesToFile(obs_infos,param_file, dummy, wmode,"H")
+            self.mcobs_handler.writeSamplingValuesToFile(
+                obs_infos, param_file, dummy, wmode, "H"
+            )
 
-            #delete samplings unless single hadron
-            if hadrons!=1:
+            # delete samplings unless single hadron
+            if hadrons != 1:
                 for param in obs_infos:
                     self.mcobs_handler.eraseSamplings(param)
 
-
-
-        #do tmin_fits
+        # do tmin_fits
         tmin_results[channel][intop] = {}
         tmin_results[channel][intop]["fits"] = {}
-        if 'tmin_plots' in this_fit_input:
-            for plot in this_fit_input['tmin_plots']:
-                self.fit_model_series( plot, this_fit_input, channel, intop, tmin_results)
+        if "tmin_plots" in this_fit_input:
+            for plot in this_fit_input["tmin_plots"]:
+                self.fit_model_series(
+                    plot, this_fit_input, channel, intop, tmin_results
+                )
         tmax_results[channel][intop] = {}
         tmax_results[channel][intop]["fits"] = {}
-        if 'tmax_plots' in this_fit_input:
-            for plot in this_fit_input['tmax_plots']:
-                self.fit_model_series( plot, this_fit_input, channel, intop, tmax_results)
+        if "tmax_plots" in this_fit_input:
+            for plot in this_fit_input["tmax_plots"]:
+                self.fit_model_series(
+                    plot, this_fit_input, channel, intop, tmax_results
+                )
         return fitenergy_obs_info, fitamp_obs_info
-    
-    def fit_model_series(self, plot, this_fit_input, channel, intop, results ):
-        model = plot['model']
+
+    def fit_model_series(self, plot, this_fit_input, channel, intop, results):
+        model = plot["model"]
         sh_priors = {}
         scat_info = []
         if "ratio" in plot:
-                if plot["ratio"]:
-                    if "non_interacting_level" not in this_fit_input:
-                        return
-                    else:
-                        model+="-ratio"
+            if plot["ratio"]:
+                if "non_interacting_level" not in this_fit_input:
+                    return
+                else:
+                    model += "-ratio"
         if "sim_fit" in plot:
             if plot["sim_fit"]:
-                model+="-sim"
-                if not self.set_up_sim_fit(plot, model, scat_info, sh_priors, channel, intop):
+                model += "-sim"
+                if not self.set_up_sim_fit(
+                    plot, model, scat_info, sh_priors, channel, intop
+                ):
                     return
                 scat_info_initial = scat_info[0]
 
         results[channel][intop]["fits"][model] = {}
         results[channel][intop]["fits"][model]["info"] = None
 
-        if 'tmin_min' in plot and 'tmin_max' in plot:
-            tstart = plot['tmin_min']
-            tstop = plot['tmin_max']
-        elif 'tmax_min' in plot and 'tmax_max' in plot:
-            tstart = plot['tmax_min']
-            tstop = plot['tmax_max']
+        if "tmin_min" in plot and "tmin_max" in plot:
+            tstart = plot["tmin_min"]
+            tstop = plot["tmin_max"]
+        elif "tmax_min" in plot and "tmax_max" in plot:
+            tstart = plot["tmax_min"]
+            tstop = plot["tmax_max"]
         else:
             logging.error("Parameters for tmin or tmax plot are incomplete.")
 
-        for i in range(tstart,tstop+1):
+        for i in range(tstart, tstop + 1):
 
             task_input = sigmond_input.SigmondInput(
                 os.path.basename(self.project_handler.project_info.project_dir),
@@ -2306,90 +3537,192 @@ class SigmondSpectrumFits:
                 self.project_handler.project_info.ensembles_file,
                 self.data_files,
                 "temp1.xml",
-                os.path.join(self.proj_files_handler.log_dir(),"sigmond_spectrum_log.xml"), #actually creating this
-                self.other_params['precompute'],
+                os.path.join(
+                    self.proj_files_handler.log_dir(), "sigmond_spectrum_log.xml"
+                ),  # actually creating this
+                self.other_params["precompute"],
                 None,
             )
 
             this_fit_config = {}
-            params_to_update = ['sim_fit', 'priors']
-            if 'tmin_min' in plot:
-                this_fit_config['tmin'] = i
-                this_fit_config['tmax'] = this_fit_input['tmax']
-                params_to_update.append('tmax')
-            else: 
-                this_fit_config['tmin'] = this_fit_input['tmin']
-                this_fit_config['tmax'] = i
-                params_to_update.append('tmin')
-            for config in ['tmax', 'sim_fit', 'priors']:
+            params_to_update = ["sim_fit", "priors"]
+            if "tmin_min" in plot:
+                this_fit_config["tmin"] = i
+                this_fit_config["tmax"] = this_fit_input["tmax"]
+                params_to_update.append("tmax")
+            else:
+                this_fit_config["tmin"] = this_fit_input["tmin"]
+                this_fit_config["tmax"] = i
+                params_to_update.append("tmin")
+            for config in ["tmax", "sim_fit", "priors"]:
                 if config in plot:
                     this_fit_config[config] = plot[config]
-            this_fit_config['model'] = fit_info.FitModel(plot['model'])
-            if 'ratio' in plot:
-                this_fit_config['ratio'] = plot['ratio']
-                if plot['ratio']:
-                    this_fit_config["non_interacting_level"] = this_fit_input["non_interacting_level"]
-                    this_fit_config["non_interacting_operators"] = this_fit_input["non_interacting_operators"]
+            this_fit_config["model"] = fit_info.FitModel(plot["model"])
+            if "ratio" in plot:
+                this_fit_config["ratio"] = plot["ratio"]
+                if plot["ratio"]:
+                    this_fit_config["non_interacting_level"] = this_fit_input[
+                        "non_interacting_level"
+                    ]
+                    this_fit_config["non_interacting_operators"] = this_fit_input[
+                        "non_interacting_operators"
+                    ]
 
             for param, setting in self.default_fit_params.items():
                 if param not in this_fit_config:
                     this_fit_config[param] = setting
-            if this_fit_config!=this_fit_input:
+            if this_fit_config != this_fit_input:
                 try:
-                    if not self.other_params['minimizer_info']['minimizer']=='lmder':
-                        nsamplings = self.project_handler.project_info.sampling_info.getNumberOfReSamplings(self.project_handler.project_info.bins_info)
-                        this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.scipy_fit(intop, self.other_params['minimizer_info'], this_fit_config, self.mcobs_handler, 
-                                                self.project_handler.subtract_vev, self.project_handler.hermitian, self.ensemble_info.getLatticeTimeExtent(),
-                                                self.project_handler.nodes, nsamplings, False, sh_priors, scat_info[:])
+                    if not self.other_params["minimizer_info"]["minimizer"] == "lmder":
+                        nsamplings = self.project_handler.project_info.sampling_info.getNumberOfReSamplings(
+                            self.project_handler.project_info.bins_info
+                        )
+                        this_fit_info, these_fit_results, chisqr, qual, dof = (
+                            sigmond_util.scipy_fit(
+                                intop,
+                                self.other_params["minimizer_info"],
+                                this_fit_config,
+                                self.mcobs_handler,
+                                self.project_handler.subtract_vev,
+                                self.project_handler.hermitian,
+                                self.ensemble_info.getLatticeTimeExtent(),
+                                self.project_handler.nodes,
+                                nsamplings,
+                                False,
+                                sh_priors,
+                                scat_info[:],
+                            )
+                        )
                     else:
-                        this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.sigmond_fit(task_input, intop, self.other_params['minimizer_info'], this_fit_config, self.mcobs_handler, 
-                                            self.project_handler.project_info.sampling_info.getSamplingMode(), self.project_handler.subtract_vev, "NA", True, sh_priors, scat_info[:])
+                        this_fit_info, these_fit_results, chisqr, qual, dof = (
+                            sigmond_util.sigmond_fit(
+                                task_input,
+                                intop,
+                                self.other_params["minimizer_info"],
+                                this_fit_config,
+                                self.mcobs_handler,
+                                self.project_handler.project_info.sampling_info.getSamplingMode(),
+                                self.project_handler.subtract_vev,
+                                "NA",
+                                True,
+                                sh_priors,
+                                scat_info[:],
+                            )
+                        )
 
-                    if results[channel][intop]["fits"][model]["info"]==None:
+                    if results[channel][intop]["fits"][model]["info"] == None:
                         results[channel][intop]["fits"][model]["info"] = this_fit_info
                     results[channel][intop]["fits"][model][i] = {
-                        "estimates": these_fit_results, 
-                        "chisqrdof": float(chisqr), 
+                        "estimates": these_fit_results,
+                        "chisqrdof": float(chisqr),
                         "qual": float(qual),
-                        "dof": int(dof)
+                        "dof": int(dof),
                     }
-                    #compute relevant info, but we don't care about saving the tmin fit samplings
-                    tfitenergy_obs_info = sigmond.MCObsInfo("dummy", this_fit_info.energy_index)
-                    delab_obs_info = sigmond.MCObsInfo("dummy", this_fit_info.num_params)
-                    elab_obs_info = sigmond.MCObsInfo("dummy", this_fit_info.num_params+1)
-                    ecm_obs_info = sigmond.MCObsInfo("dummy", this_fit_info.num_params+2)
+                    # compute relevant info, but we don't care about saving the tmin fit samplings
+                    tfitenergy_obs_info = sigmond.MCObsInfo(
+                        "dummy", this_fit_info.energy_index
+                    )
+                    delab_obs_info = sigmond.MCObsInfo(
+                        "dummy", this_fit_info.num_params
+                    )
+                    elab_obs_info = sigmond.MCObsInfo(
+                        "dummy", this_fit_info.num_params + 1
+                    )
+                    ecm_obs_info = sigmond.MCObsInfo(
+                        "dummy", this_fit_info.num_params + 2
+                    )
 
                     if "non_interacting_level" in this_fit_input:
                         this_ni_level = this_fit_input["non_interacting_level"]
                         if this_fit_info.sim_fit:
-                            if scat_info[0]!=scat_info_initial:
-                                self.other_params['non_interacting_levels'][str(channel)][intop.level].reverse()
-                            this_ni_level = get_sim_ni_level_tmin(this_fit_input["non_interacting_level"],this_fit_info,scat_info)
+                            if scat_info[0] != scat_info_initial:
+                                self.other_params["non_interacting_levels"][
+                                    str(channel)
+                                ][intop.level].reverse()
+                            this_ni_level = get_sim_ni_level_tmin(
+                                this_fit_input["non_interacting_level"],
+                                this_fit_info,
+                                scat_info,
+                            )
 
-                    if this_fit_info.ratio: 
-                        #compute ecm and elab
+                    if this_fit_info.ratio:
+                        # compute ecm and elab
                         delab_obs_info = tfitenergy_obs_info
                         Nx = self.ensemble_info.getLatticeXExtent()
-                        ni_levels = [(sh,mom*6.2831853071795864770*6.2831853071795864770/Nx/Nx) for sh,mom in this_ni_level]
-                        sigmond.doReconstructEnergyBySamplings(self.mcobs_handler,delab_obs_info,ni_levels,elab_obs_info)
-                        results[channel][intop]["fits"][model][i]["elab"] = self.mcobs_handler.getEstimate(elab_obs_info)
-                        results[channel][intop]["fits"][model][i]["dElab"] = these_fit_results[this_fit_info.energy_index]
+                        ni_levels = [
+                            (
+                                sh,
+                                mom
+                                * 6.2831853071795864770
+                                * 6.2831853071795864770
+                                / Nx
+                                / Nx,
+                            )
+                            for sh, mom in this_ni_level
+                        ]
+                        sigmond.doReconstructEnergyBySamplings(
+                            self.mcobs_handler, delab_obs_info, ni_levels, elab_obs_info
+                        )
+                        results[channel][intop]["fits"][model][i]["elab"] = (
+                            self.mcobs_handler.getEstimate(elab_obs_info)
+                        )
+                        results[channel][intop]["fits"][model][i]["dElab"] = (
+                            these_fit_results[this_fit_info.energy_index]
+                        )
                     else:
-                        results[channel][intop]["fits"][model][i]["elab"] = these_fit_results[this_fit_info.energy_index]
+                        results[channel][intop]["fits"][model][i]["elab"] = (
+                            these_fit_results[this_fit_info.energy_index]
+                        )
                         elab_obs_info = tfitenergy_obs_info
                         if "non_interacting_level" in this_fit_input:
-                            #compute delab
+                            # compute delab
                             Nx = self.ensemble_info.getLatticeXExtent()
-                            ni_levels = [(sh,mom*6.2831853071795864770*6.2831853071795864770/Nx/Nx) for sh,mom in this_ni_level]
-                            sigmond.doEnergyDifferenceBySamplings(self.mcobs_handler,elab_obs_info,ni_levels,delab_obs_info)
-                            results[channel][intop]["fits"][model][i]["dElab"] = self.mcobs_handler.getEstimate(delab_obs_info)
+                            ni_levels = [
+                                (
+                                    sh,
+                                    mom
+                                    * 6.2831853071795864770
+                                    * 6.2831853071795864770
+                                    / Nx
+                                    / Nx,
+                                )
+                                for sh, mom in this_ni_level
+                            ]
+                            sigmond.doEnergyDifferenceBySamplings(
+                                self.mcobs_handler,
+                                elab_obs_info,
+                                ni_levels,
+                                delab_obs_info,
+                            )
+                            results[channel][intop]["fits"][model][i]["dElab"] = (
+                                self.mcobs_handler.getEstimate(delab_obs_info)
+                            )
 
-                            #used correlated sim fit to construct the shift, but then use rest mass fit
-                                #and dispersion relation to shift back to elab #overwriting original elab
+                            # used correlated sim fit to construct the shift, but then use rest mass fit
+                            # and dispersion relation to shift back to elab #overwriting original elab
                             if this_fit_info.sim_fit:
-                                ni_levels = [(sh,mom*6.2831853071795864770*6.2831853071795864770/Nx/Nx) for sh,mom in this_fit_input["non_interacting_level"]]
-                                sigmond.doReconstructEnergyBySamplings(self.mcobs_handler,delab_obs_info,ni_levels,elab_obs_info)
-                                results[channel][intop]["fits"][model][i]["elab"]= self.mcobs_handler.getEstimate(elab_obs_info)
+                                ni_levels = [
+                                    (
+                                        sh,
+                                        mom
+                                        * 6.2831853071795864770
+                                        * 6.2831853071795864770
+                                        / Nx
+                                        / Nx,
+                                    )
+                                    for sh, mom in this_fit_input[
+                                        "non_interacting_level"
+                                    ]
+                                ]
+                                sigmond.doReconstructEnergyBySamplings(
+                                    self.mcobs_handler,
+                                    delab_obs_info,
+                                    ni_levels,
+                                    elab_obs_info,
+                                )
+                                results[channel][intop]["fits"][model][i]["elab"] = (
+                                    self.mcobs_handler.getEstimate(elab_obs_info)
+                                )
 
                     # if intop.channel.psq==0:
                     #     results[channel][intop]["fits"][model][i]["ecm"] = results[channel][intop]["fits"][model][i]["elab"]
@@ -2402,56 +3735,90 @@ class SigmondSpectrumFits:
                 except RuntimeError as err:
                     # print(f"RuntimeError: Tmin fit {i} for model {model} failed: {err}")
                     results[channel][intop]["fits"][model][i] = None
-        
+
         if "sim_fit" in plot:
             if plot["sim_fit"]:
-                plot['model'] = "2-exp" #generalize
-                plot['priors'] = {}
+                plot["model"] = "2-exp"  # generalize
+                plot["priors"] = {}
 
-    #use information about single hadrons and correlator data to set up priors for simultaneous fits
+    # use information about single hadrons and correlator data to set up priors for simultaneous fits
     def set_up_sim_fit(self, plot, model, scat_info, sh_priors, channel, intop):
-        #setup priors
+        # setup priors
         pivot_type = sigmond_util.get_pivot_type(self.other_params["pivot_file"])
-        if pivot_type==None:
+        if pivot_type == None:
             logging.warning("Need pivot information in order to do Conspiracy fits")
             return False
-        if str(channel) not in self.other_params['non_interacting_levels']:
-            logging.warning("Need non interacting level defined in order to do Conspiracy fits")
+        if str(channel) not in self.other_params["non_interacting_levels"]:
+            logging.warning(
+                "Need non interacting level defined in order to do Conspiracy fits"
+            )
             return False
-        if len(self.other_params['non_interacting_levels'][str(channel)])<=intop.level:
-            logging.warning("Need non interacting level defined in order to do Conspiracy fits")
+        if (
+            len(self.other_params["non_interacting_levels"][str(channel)])
+            <= intop.level
+        ):
+            logging.warning(
+                "Need non interacting level defined in order to do Conspiracy fits"
+            )
             return False
-        pivoter = sigmond_util.setup_pivoter(pivot_type, self.other_params["pivot_file"], channel, self.mcobs_handler)
-        corr = sigmond.CorrelatorAtTimeInfo(intop.operator_info,intop.operator_info,pivoter.getTauZ(),self.project_handler.hermitian,self.project_handler.subtract_vev)
-        corrplus1 = sigmond.CorrelatorAtTimeInfo(intop.operator_info,intop.operator_info,pivoter.getTauZ()+self.project_handler.time_separation,
-                                                 self.project_handler.hermitian,self.project_handler.subtract_vev)
+        pivoter = sigmond_util.setup_pivoter(
+            pivot_type, self.other_params["pivot_file"], channel, self.mcobs_handler
+        )
+        corr = sigmond.CorrelatorAtTimeInfo(
+            intop.operator_info,
+            intop.operator_info,
+            pivoter.getTauZ(),
+            self.project_handler.hermitian,
+            self.project_handler.subtract_vev,
+        )
+        corrplus1 = sigmond.CorrelatorAtTimeInfo(
+            intop.operator_info,
+            intop.operator_info,
+            pivoter.getTauZ() + self.project_handler.time_separation,
+            self.project_handler.hermitian,
+            self.project_handler.subtract_vev,
+        )
         self.mcobs_handler.setSamplingBegin()
-        ecalc = sigmond.EffectiveEnergyCalculator( self.project_handler.time_separation, self.ensemble_info.getLatticeTimeExtent(),
-                                                  self.project_handler.effective_energy_type)
-        corrmean_at_tZ = self.mcobs_handler.getCurrentSamplingValue(sigmond.MCObsInfo(corr,sigmond.ComplexArg.RealPart))
-        corrmean_at_tZplus1 = self.mcobs_handler.getCurrentSamplingValue(sigmond.MCObsInfo(corrplus1,sigmond.ComplexArg.RealPart))
-        energy_init = ecalc.calculate(pivoter.getTauZ(),corrmean_at_tZ,corrmean_at_tZplus1,0.0)
-        amp_init = corrmean_at_tZ/np.exp(-energy_init*pivoter.getTauZ())
-        non_interacting_level = OrderedSet(self.other_params['non_interacting_levels'][str(channel)][intop.level])
+        ecalc = sigmond.EffectiveEnergyCalculator(
+            self.project_handler.time_separation,
+            self.ensemble_info.getLatticeTimeExtent(),
+            self.project_handler.effective_energy_type,
+        )
+        corrmean_at_tZ = self.mcobs_handler.getCurrentSamplingValue(
+            sigmond.MCObsInfo(corr, sigmond.ComplexArg.RealPart)
+        )
+        corrmean_at_tZplus1 = self.mcobs_handler.getCurrentSamplingValue(
+            sigmond.MCObsInfo(corrplus1, sigmond.ComplexArg.RealPart)
+        )
+        energy_init = ecalc.calculate(
+            pivoter.getTauZ(), corrmean_at_tZ, corrmean_at_tZplus1, 0.0
+        )
+        amp_init = corrmean_at_tZ / np.exp(-energy_init * pivoter.getTauZ())
+        non_interacting_level = OrderedSet(
+            self.other_params["non_interacting_levels"][str(channel)][intop.level]
+        )
         for level in non_interacting_level:
             hadron, mom = level.split("(")
             mom = int(mom[:-1])
-            shop = operator.Operator(self.other_params['single_hadrons'][hadron][mom])
+            shop = operator.Operator(self.other_params["single_hadrons"][hadron][mom])
             sh_fit_info = self.single_hadron_results[shop.channel][shop]["info"]
             scat_info.append(sh_fit_info)
             sh_fit_est = self.single_hadron_results[shop.channel][shop]["estimates"]
             sh_priors[sh_fit_info.obs_name] = {}
             for sh_param, est in zip(sh_fit_info.param_names, sh_fit_est):
-                sh_priors[sh_fit_info.obs_name][sh_param] = {"Mean": est.getFullEstimate(), "Error": 4.0*est.getSymmetricError()}
-        if len(non_interacting_level)==1 and model=="2-exp-sim":
-            plot['model'] = "2-exp-deg-cons"
-        elif len(non_interacting_level)==2 and model=="2-exp-sim":
-            plot['model'] = "2-exp-cons"
+                sh_priors[sh_fit_info.obs_name][sh_param] = {
+                    "Mean": est.getFullEstimate(),
+                    "Error": 4.0 * est.getSymmetricError(),
+                }
+        if len(non_interacting_level) == 1 and model == "2-exp-sim":
+            plot["model"] = "2-exp-deg-cons"
+        elif len(non_interacting_level) == 2 and model == "2-exp-sim":
+            plot["model"] = "2-exp-cons"
         else:
             logging.error("This fit type is not supported for simultaneous fits.")
         plot["priors"] = {
-            "FirstEnergy": {"Mean": energy_init, "Error": 0.1*energy_init},
-            "FirstAmplitude": {"Mean": amp_init, "Error": 0.5*amp_init},
+            "FirstEnergy": {"Mean": energy_init, "Error": 0.1 * energy_init},
+            "FirstAmplitude": {"Mean": amp_init, "Error": 0.5 * amp_init},
         }
         for param in fit_info.FitInfo.PARAMETERS[fit_info.FitModel(plot["model"])]:
             if "Ratio" in param:
@@ -2462,25 +3829,38 @@ class SigmondSpectrumFits:
         return True
 
 
-    
 def get_sim_ni_level(ni_level, central_fit_obs_name, scat_info):
     this_ni_level = ni_level[:]
-    if len(scat_info)==2:
-        for i,scat in enumerate(scat_info):
-            new_obs_name = central_fit_obs_name+"-"+scat.obs_name
-            this_ni_level[i] = (sigmond.MCObsInfo(new_obs_name,scat.obs_id(scat_info[0].energy_index)),0)
-    elif len(scat_info)==1:
+    if len(scat_info) == 2:
+        for i, scat in enumerate(scat_info):
+            new_obs_name = central_fit_obs_name + "-" + scat.obs_name
+            this_ni_level[i] = (
+                sigmond.MCObsInfo(new_obs_name, scat.obs_id(scat_info[0].energy_index)),
+                0,
+            )
+    elif len(scat_info) == 1:
         for i in range(len(this_ni_level)):
-            new_obs_name = central_fit_obs_name+"-"+scat_info[0].obs_name
-            this_ni_level[i] = (sigmond.MCObsInfo(new_obs_name,scat_info[0].obs_id(scat_info[0].energy_index)),0)
+            new_obs_name = central_fit_obs_name + "-" + scat_info[0].obs_name
+            this_ni_level[i] = (
+                sigmond.MCObsInfo(
+                    new_obs_name, scat_info[0].obs_id(scat_info[0].energy_index)
+                ),
+                0,
+            )
     return this_ni_level
+
 
 def get_sim_ni_level_tmin(ni_level, this_fit_info, scat_info):
     this_ni_level = ni_level[:]
-    if len(scat_info)==2:
-        for i,scat_info in enumerate(scat_info):
-            this_ni_level[i] = (sigmond.MCObsInfo("dummy",this_fit_info.num_params+i*scat_info.num_params),0)
-    elif len(scat_info)==1:
+    if len(scat_info) == 2:
+        for i, scat_info in enumerate(scat_info):
+            this_ni_level[i] = (
+                sigmond.MCObsInfo(
+                    "dummy", this_fit_info.num_params + i * scat_info.num_params
+                ),
+                0,
+            )
+    elif len(scat_info) == 1:
         for i in range(len(this_ni_level)):
-            this_ni_level[i] = (sigmond.MCObsInfo("dummy",this_fit_info.num_params),0)
+            this_ni_level[i] = (sigmond.MCObsInfo("dummy", this_fit_info.num_params), 0)
     return this_ni_level
