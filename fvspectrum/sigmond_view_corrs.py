@@ -22,8 +22,13 @@ general:
     omissions: []               #default []
     rebin: 1                    #default 1
 preview_corrs:                  #required
-  raw_data_files:               #required 
+  raw_data_files:               #required
+  # entries may be a file path, a directory, or a stub+range mapping that
+  # expands to '<file_stub>.<n>' for n in [min, max]:
   - /latticeQCD/raid3/ahanlon/data/cls21_c103/updated_stats/sigmond.fwd/cls21_c103/nucleon_S0.bin
+  - file_stub: /home/darvish/r6/tetraquarks/tetraquarks_P0_A1g/mergedcorr
+    min: 0
+    max: 488
   create_pdfs: true             #not required #default true
   create_pickles: true          #not required #default true
   create_summary: true          #not required #default true

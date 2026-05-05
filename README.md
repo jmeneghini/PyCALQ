@@ -117,15 +117,26 @@ Common task inputs include:
 ```
 
 Short descriptions of common task inputs:
-- averaged_input_correlators_dir - (list or str) location of averaged data, can be directory(ies) or file(s)
-                        if no file is provided, will search the project directory for averaged data
+- averaged_input_correlators_dir - (list, str, or stub mapping) location of averaged data, can be
+                        directory(ies), file(s), or a `{file_stub, min, max}` mapping (see raw_data_files);
+                        if no value is provided, will search the project directory for averaged data
 - create_pdfs - (bool) if true, generates matplotlib pdf plots
 - create_pickles - (bool) if true, generates matplotlib pickle files
 - create_summary - (bool) if true, generated latex pdf summary of all plots
                         and some calclation output
 - generate_estimates - (bool) if true, generates csvs of bootstrap or jackknife estimates
-- raw_data_files - (str or list) files or directories where raw correlator data is stored, this 
-                    data is presumed to be unaveraged over momentum or irrep row
+- raw_data_files - (str or list) files or directories where raw correlator data is stored, this
+                    data is presumed to be unaveraged over momentum or irrep row.
+                    A list entry may also be a `{file_stub, min, max}` mapping that expands to
+                    `<file_stub>.<n>` for n in `[min, max]` (sigmond's FileNameStub/MinFileNumber/
+                    MaxFileNumber XML keys are also accepted), e.g.:
+
+                        raw_data_files:
+                        - file_stub: /path/to/mergedcorr
+                          min: 0
+                          max: 488
+- rotated_input_correlators_dir - (list, str, or stub mapping) same accepted forms as
+                        averaged_input_correlators_dir, but for rotated correlator data.
 - reference_particle - (str) nickname of particle for reference fit. User can define this name in 'single_hadrons' input parameter in the 'fit_spectrum' task
 - tmin - (int) minimum correlator time that the task will performed
 - tmax - (int) maximum correlator time that the task will performed

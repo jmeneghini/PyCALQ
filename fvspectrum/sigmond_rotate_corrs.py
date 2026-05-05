@@ -29,7 +29,15 @@ rotate_corrs:                           #required
   t0: 5                                 #required
   tD: 10                                #required
   tN: 5                                 #required
-  averaged_input_correlators_dir: {project_dir}/1average_corrs/data/bins #not required #default {project_dir}/1average_corrs/data/bins 
+  # averaged_input_correlators_dir may be a path, a list of paths, or a list
+  # whose entries can also be {file_stub, min, max} mappings (also accepted as
+  # FileNameStub/MinFileNumber/MaxFileNumber) which expand to '<file_stub>.<n>'
+  # for n in [min, max], e.g.:
+  #   averaged_input_correlators_dir:
+  #   - file_stub: /home/darvish/r6/tetraquarks/tetraquarks_P0_A1g/mergedcorr
+  #     min: 0
+  #     max: 488
+  averaged_input_correlators_dir: {project_dir}/1average_corrs/data/bins #not required #default {project_dir}/1average_corrs/data/bins
   create_pdfs: true                     #not required #default true
   create_pickles: true                  #not required #default true
   create_summary: true                  #not required #default true
@@ -159,10 +167,9 @@ class SigmondRotateCorrs:
         # get averaged data
         averaged_data_files = []
         if "averaged_input_correlators_dir" in task_configs:
-            if type(task_configs["averaged_input_correlators_dir"]) == list:
-                averaged_data_files = task_configs["averaged_input_correlators_dir"]
-            else:
-                averaged_data_files.append(task_configs["averaged_input_correlators_dir"])
+            averaged_data_files = sigmond_util.expand_file_specs(
+                task_configs["averaged_input_correlators_dir"]
+            )
         else:
             if self.project_handler.project_info.sampling_info.isJackknifeMode():  # do this better
                 sampling_mode = "J"

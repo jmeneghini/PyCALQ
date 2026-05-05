@@ -88,30 +88,36 @@ def _expand_file_stub(entry):
     return [f"{stub}.{n}" for n in range(min_n, max_n + 1)]
 
 
+# normalize a user-specified data-file list: wrap a scalar in a list and expand
+# any {file_stub, min, max} mapping entries into concrete file paths. Missing
+# files within an expanded stub range are warned about and skipped.
+def expand_file_specs(items):
+    if not isinstance(items, list):
+        items = [items]
+    expanded = []
+    for item in items:
+        if isinstance(item, dict):
+            stub_files = _expand_file_stub(item)
+            missing = [f for f in stub_files if not os.path.isfile(f)]
+            if missing:
+                stub_name = item.get("file_stub", item.get("stub", item.get("FileNameStub")))
+                logging.warning(
+                    f"{len(missing)} of {len(stub_files)} files missing for stub "
+                    f"'{stub_name}' (e.g. {missing[0]}); they will be skipped."
+                )
+            expanded.extend(f for f in stub_files if os.path.isfile(f))
+        else:
+            expanded.append(item)
+    return expanded
+
+
 # check that raw data files are real and not within project
 def check_raw_data_files(raw_data_files, project_dir):
     # check that raw_data_files are real files
     if not raw_data_files:
         logging.critical("No directory to view. Add 'raw_data_files' to 'view_data' task parameters.")
-    if type(raw_data_files) != list:
-        raw_data_files = [raw_data_files]
 
-    # expand any {file_stub, min, max} mapping entries into concrete file paths
-    expanded = []
-    for item in raw_data_files:
-        if isinstance(item, dict):
-            stub_files = _expand_file_stub(item)
-            missing = [f for f in stub_files if not os.path.isfile(f)]
-            if missing:
-                logging.warning(
-                    f"{len(missing)} of {len(stub_files)} files missing for stub "
-                    f"'{item.get('file_stub', item.get('stub', item.get('FileNameStub')))}' "
-                    f"(e.g. {missing[0]}); they will be skipped."
-                )
-            expanded.extend(f for f in stub_files if os.path.isfile(f))
-        else:
-            expanded.append(item)
-    raw_data_files = expanded
+    raw_data_files = expand_file_specs(raw_data_files)
 
     filtered_raw_data_files = list(filter(lambda file: os.path.isdir(file) or os.path.isfile(file), raw_data_files))
     if filtered_raw_data_files != raw_data_files:
