@@ -27,7 +27,12 @@ general:
     rebin: 1                            #default 1
 average_corrs:                          #required
   raw_data_files:                       #required
+  # entries may be a file path, a directory, or a stub+range mapping that
+  # expands to '<file_stub>.<n>' for n in [min, max]:
   - /latticeQCD/raid3/ahanlon/data/cls21_c103/updated_stats/sigmond.fwd/cls21_c103/nucleon_S0.bin
+  - file_stub: /home/darvish/r6/tetraquarks/tetraquarks_P0_A1g/mergedcorr
+    min: 0
+    max: 488
   average_by_bins: false                #not required #default false
   average_hadron_irrep_info: true       #not required #default true
   average_hadron_spatial_info: true     #not required #default true

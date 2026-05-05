@@ -64,21 +64,60 @@ class CompactListDumper(yaml.Dumper):
         return self.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=True)
 
 
+# expand a {file_stub, min, max} mapping into ['stub.min', ..., 'stub.max']
+# Accepts either snake_case keys (file_stub/stub, min/max) or sigmond XML-style
+# keys (FileNameStub, MinFileNumber, MaxFileNumber).
+def _expand_file_stub(entry):
+    stub = entry.get("file_stub", entry.get("stub", entry.get("FileNameStub")))
+    min_n = entry.get("min", entry.get("MinFileNumber"))
+    max_n = entry.get("max", entry.get("MaxFileNumber"))
+    if stub is None or min_n is None or max_n is None:
+        logging.critical(
+            f"File stub entry must define a stub and min/max file numbers; got {entry}."
+        )
+        raise ValueError(f"Invalid file stub entry: {entry}")
+    try:
+        min_n = int(min_n)
+        max_n = int(max_n)
+    except (TypeError, ValueError):
+        logging.critical(f"File stub min/max must be integers; got min={min_n}, max={max_n}.")
+        raise
+    if max_n < min_n:
+        logging.critical(f"File stub max ({max_n}) is less than min ({min_n}) for stub '{stub}'.")
+        raise ValueError(f"Invalid file stub range for '{stub}': [{min_n}, {max_n}]")
+    return [f"{stub}.{n}" for n in range(min_n, max_n + 1)]
+
+
 # check that raw data files are real and not within project
 def check_raw_data_files(raw_data_files, project_dir):
     # check that raw_data_files are real files
     if not raw_data_files:
         logging.critical("No directory to view. Add 'raw_data_files' to 'view_data' task parameters.")
     if type(raw_data_files) != list:
-        if os.path.isdir(raw_data_files) or os.path.isfile(raw_data_files):
-            raw_data_files = [raw_data_files]
+        raw_data_files = [raw_data_files]
+
+    # expand any {file_stub, min, max} mapping entries into concrete file paths
+    expanded = []
+    for item in raw_data_files:
+        if isinstance(item, dict):
+            stub_files = _expand_file_stub(item)
+            missing = [f for f in stub_files if not os.path.isfile(f)]
+            if missing:
+                logging.warning(
+                    f"{len(missing)} of {len(stub_files)} files missing for stub "
+                    f"'{item.get('file_stub', item.get('stub', item.get('FileNameStub')))}' "
+                    f"(e.g. {missing[0]}); they will be skipped."
+                )
+            expanded.extend(f for f in stub_files if os.path.isfile(f))
         else:
-            logging.critical("Parameter 'raw_data_files' must be a real directory.")
-    else:
-        filtered_raw_data_files = list(filter(lambda file: os.path.isdir(file) or os.path.isfile(file), raw_data_files))
-        if filtered_raw_data_files != raw_data_files:
-            logging.critical("Item in 'raw_data_files' must be a real files.")
-        raw_data_files = filtered_raw_data_files
+            expanded.append(item)
+    raw_data_files = expanded
+
+    filtered_raw_data_files = list(filter(lambda file: os.path.isdir(file) or os.path.isfile(file), raw_data_files))
+    if filtered_raw_data_files != raw_data_files:
+        dropped = [f for f in raw_data_files if f not in filtered_raw_data_files]
+        logging.critical(f"Items in 'raw_data_files' must be real files or directories; dropped: {dropped}")
+    raw_data_files = filtered_raw_data_files
 
     # check that raw_data_files are not in project
     parent_path = os.path.abspath(project_dir)
