@@ -442,12 +442,32 @@ class SigmondRotateCorrs:
                 )
                 return
 
+            # drop channels that didn't actually get rotated (per-channel sigmond
+            # task may have failed e.g. on condition-number checks); without this
+            # the header read below dies with an opaque h5py KeyError.
+            rotated_path = self.rotated_corrs_file(not self.other_params["rotate_by_samplings"])
+            pivot_path = self.pivot_file()
+            with h5py.File(rotated_path, "r") as datafile:
+                present_in_data = set(datafile.keys())
+            with h5py.File(pivot_path, "r") as pivotfile:
+                present_in_pivot = set(pivotfile.keys())
+            missing = [c for c in self.channels if repr(c) not in present_in_data or repr(c) not in present_in_pivot]
+            if missing:
+                logging.warning(
+                    f"{len(missing)} of {len(self.channels)} channels were not written by the rotation task "
+                    f"(e.g. {repr(missing[0])}); they will be skipped. Check sigmond logs at "
+                    f"{self.sigmond_rotation_log('*')} for details."
+                )
+                self.channels = [c for c in self.channels if repr(c) in present_in_data and repr(c) in present_in_pivot]
+            if not self.channels:
+                logging.critical(
+                    f"No channels were successfully rotated. See sigmond logs at {self.sigmond_rotation_log('*')}."
+                )
+                return
+
             # combine and add info to both pivot and data files
-            with h5py.File(
-                self.rotated_corrs_file(not self.other_params["rotate_by_samplings"]),
-                "r+",
-            ) as datafile:
-                with h5py.File(self.pivot_file(), "r+") as pivotfile:
+            with h5py.File(rotated_path, "r+") as datafile:
+                with h5py.File(pivot_path, "r+") as pivotfile:
                     dataheader = datafile[repr(self.channels[0])]["Header"][()]
                     pivotheader = pivotfile[repr(self.channels[0])]["Header"][()]
                     datainfo = datafile["Info"]
