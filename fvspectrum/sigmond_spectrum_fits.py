@@ -2235,9 +2235,9 @@ class SigmondSpectrumFits:
                                     else:  # no dElab plot
                                         plh.add_single_plot(elab_file)
 
-                        if op in all_sim_fit_plots[channel]:
-                            if all_sim_fit_plots[channel][op]:
-                                plh.add_plot_series(all_sim_fit_plots[channel][op])
+                        sim_fit_plots = all_sim_fit_plots.get(channel, {})
+                        if op in sim_fit_plots and sim_fit_plots[op]:
+                            plh.add_plot_series(sim_fit_plots[op])
 
                     if (
                         self.other_params["compute_overlaps"]

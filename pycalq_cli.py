@@ -191,7 +191,10 @@ def main():
             parser.print_help()
 
     except Exception as e:
-        print(f"Error: {e}", file=sys.stderr)
+        import traceback
+
+        print(f"Error: {type(e).__name__}: {e}", file=sys.stderr)
+        traceback.print_exc(file=sys.stderr)
         sys.exit(1)
 
 
