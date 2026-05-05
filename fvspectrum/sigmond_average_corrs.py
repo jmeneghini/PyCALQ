@@ -551,7 +551,7 @@ def _getOperatorsMap(operators, averaged_channel, get_had_spat=False, get_had_ir
     for operator in operators:
         averaged_op = _getAveragedOperator(operator, averaged_channel, get_had_spat, get_had_irrep)
         if averaged_op in op_map:
-            logging.critical(f"Conflicting operators {operator} and {op_map[averaged_op]}")
+            logging.critical(f"Conflicting operators {operator} and {op_map[averaged_op]}. Keys include {list(op_map.keys())}.")
         elif averaged_op == None:
             continue
 
