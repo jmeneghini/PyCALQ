@@ -571,11 +571,11 @@ def _getAveragedOperator(operator, averaged_channel, get_had_spat=False, get_had
     logging.debug(ET.tostring(xml, encoding="unicode"))
 
     def _flavor_name(flavor):
-        try:
+        if flavor in NAME_MAP:
             return NAME_MAP[flavor]
-        except KeyError:
-            logging.error(f"Unknown hadron flavor '{flavor}'; not present in NAME_MAP.")
-            raise
+        else:
+            logging.warning(f"Flavor '{flavor}' not found in NAME_MAP; using original flavor name.")
+            return flavor
 
     if op_info.getNumberOfHadrons() == 1:
         obs_name = (
