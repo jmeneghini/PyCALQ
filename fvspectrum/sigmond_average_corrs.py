@@ -74,11 +74,16 @@ class SigmondAverageCorrs:
 
         if not task_configs:
             logging.critical(f"No directory to view. Add 'raw_data_files' to '{task_name}' task parameters.")
+            raise ValueError(f"Empty task_configs for task '{task_name}'.")
+
+        if "project_dir" not in general_configs:
+            logging.critical("Missing required 'project_dir' in general_configs.")
+            raise KeyError("general_configs is missing 'project_dir'.")
 
         # check that raw_data_files are real files and not in project
-        raw_data_files = []
-        if "raw_data_files" in task_configs.keys():
-            raw_data_files = task_configs["raw_data_files"]
+        raw_data_files = task_configs.get("raw_data_files", [])
+        if not raw_data_files:
+            logging.warning(f"No 'raw_data_files' provided to task '{task_name}'.")
         raw_data_files = sigmond_util.check_raw_data_files(raw_data_files, general_configs["project_dir"])
 
         # retrieve data
@@ -123,15 +128,23 @@ class SigmondAverageCorrs:
         # make yaml output
         run_tag = self.other_params.get("run_tag", "")
         full_input_filepath = proj_file_handler.full_input_file(run_tag)
-        logging.info(f"Full input written to '{full_input_filepath}'.")
-        with open(full_input_filepath, "w+") as log_file:
-            yaml.dump({"general": general_configs, task_name: task_configs}, log_file)
+        try:
+            with open(full_input_filepath, "w+") as log_file:
+                yaml.dump({"general": general_configs, task_name: task_configs}, log_file)
+            logging.info(f"Full input written to '{full_input_filepath}'.")
+        except (OSError, yaml.YAMLError) as e:
+            logging.error(f"Failed to write full input to '{full_input_filepath}': {e}")
 
     def run(self):
+        logging.info(f"Starting '{self.task_name}' run with {len(self.channels)} raw channels.")
         # get sigmond data handler
-        mcobs_handler, mcobs_get_handler = sigmond_util.get_mcobs_handlers(
-            self.data_handler, self.project_handler.project_info
-        )
+        try:
+            mcobs_handler, mcobs_get_handler = sigmond_util.get_mcobs_handlers(
+                self.data_handler, self.project_handler.project_info
+            )
+        except Exception as e:
+            logging.critical(f"Failed to initialize sigmond mcobs handlers: {e}")
+            raise
         averaged_channels = dict()
         log_output = dict()
 
@@ -152,9 +165,12 @@ class SigmondAverageCorrs:
 
         # put channel averaged info into log
         log_path = os.path.join(self.proj_file_handler.log_dir(), "channels_combined_log.yml")
-        logging.info(f"List of averaged channels written to '{log_path}'.")
-        with open(log_path, "w+") as log_file:
-            yaml.dump(log_output, log_file)
+        try:
+            with open(log_path, "w+") as log_file:
+                yaml.dump(log_output, log_file)
+            logging.info(f"List of averaged channels written to '{log_path}'.")
+        except (OSError, yaml.YAMLError) as e:
+            logging.error(f"Failed to write channels log to '{log_path}': {e}")
 
         # generate the lists of operators to average together
         self.averaged_operators = {}
@@ -165,7 +181,7 @@ class SigmondAverageCorrs:
                 log_output[str(avchannel)] = {}
             for rawchannel in rawchannels:
                 operators = [op for op in self.data_handler.getChannelOperators(rawchannel)]
-                print(operators)
+                logging.debug(f"Channel {rawchannel} operators: {operators}")
                 ops_map = _getOperatorsMap(
                     operators,
                     avchannel,
@@ -185,9 +201,12 @@ class SigmondAverageCorrs:
 
         # put list of operators averaged into logfile
         log_path = os.path.join(self.proj_file_handler.log_dir(), "operators_combined_log.yml")
-        logging.info(f"List of averaged operators written to '{log_path}'.")
-        with open(log_path, "w+") as log_file:
-            yaml.dump(log_output, log_file)
+        try:
+            with open(log_path, "w+") as log_file:
+                yaml.dump(log_output, log_file)
+            logging.info(f"List of averaged operators written to '{log_path}'.")
+        except (OSError, yaml.YAMLError) as e:
+            logging.error(f"Failed to write operators log to '{log_path}': {e}")
 
         # determine if save data internally
         save_to_self = not self.other_params["generate_estimates"] and self.other_params["plot"]
@@ -250,53 +269,59 @@ class SigmondAverageCorrs:
                     input_ops.append(an_item)
 
             if input_ops:
-                if self.other_params["average_by_bins"]:
-                    result_obs = sigmond.doCorrelatorMatrixSuperpositionByBins(
-                        mcobs_handler,
-                        input_ops,
-                        result_ops,
-                        self.project_handler.hermitian,
-                        self.other_params["tmin"],
-                        self.other_params["tmax"],
-                        self.other_params["erase_original_matrix_from_memory"],
-                        self.other_params["ignore_missing_correlators"],
-                    )
-                    decoy = sigmond.XMLHandler()
-                    mcobs_handler.writeBinsToFile(
-                        result_obs,
-                        self.averaged_file(
-                            self.other_params["average_by_bins"],
-                            mom_key,
-                            repr(avchannel),
-                        ),
-                        decoy,
-                        wmode,
-                        "H",
-                    )
-                else:
-                    result_obs = sigmond.doCorrelatorMatrixSuperpositionBySamplings(
-                        mcobs_handler,
-                        input_ops,
-                        result_ops,
-                        self.project_handler.hermitian,
-                        self.other_params["tmin"],
-                        self.other_params["tmax"],
-                        self.other_params["erase_original_matrix_from_memory"],
-                        self.other_params["ignore_missing_correlators"],
-                    )
-                    decoy = sigmond.XMLHandler()
-                    mcobs_handler.writeSamplingValuesToFile(
-                        result_obs,
-                        self.averaged_file(
-                            self.other_params["average_by_bins"],
-                            mom_key,
-                            repr(avchannel),
-                        ),
-                        decoy,
-                        wmode,
-                        "H",
-                    )
-                file_created[index] = True
+                try:
+                    if self.other_params["average_by_bins"]:
+                        result_obs = sigmond.doCorrelatorMatrixSuperpositionByBins(
+                            mcobs_handler,
+                            input_ops,
+                            result_ops,
+                            self.project_handler.hermitian,
+                            self.other_params["tmin"],
+                            self.other_params["tmax"],
+                            self.other_params["erase_original_matrix_from_memory"],
+                            self.other_params["ignore_missing_correlators"],
+                        )
+                        decoy = sigmond.XMLHandler()
+                        mcobs_handler.writeBinsToFile(
+                            result_obs,
+                            self.averaged_file(
+                                self.other_params["average_by_bins"],
+                                mom_key,
+                                repr(avchannel),
+                            ),
+                            decoy,
+                            wmode,
+                            "H",
+                        )
+                    else:
+                        result_obs = sigmond.doCorrelatorMatrixSuperpositionBySamplings(
+                            mcobs_handler,
+                            input_ops,
+                            result_ops,
+                            self.project_handler.hermitian,
+                            self.other_params["tmin"],
+                            self.other_params["tmax"],
+                            self.other_params["erase_original_matrix_from_memory"],
+                            self.other_params["ignore_missing_correlators"],
+                        )
+                        decoy = sigmond.XMLHandler()
+                        mcobs_handler.writeSamplingValuesToFile(
+                            result_obs,
+                            self.averaged_file(
+                                self.other_params["average_by_bins"],
+                                mom_key,
+                                repr(avchannel),
+                            ),
+                            decoy,
+                            wmode,
+                            "H",
+                        )
+                    file_created[index] = True
+                except Exception as e:
+                    logging.error(f"Failed to average/write channel {avchannel}: {e}")
+                    continue
+            else:
+                logging.warning(f"No input operators built for channel {avchannel}; skipping.")
 
             # generate estimates for writing to file or plotting
             if save_to_self or self.other_params["generate_estimates"]:
@@ -541,19 +566,26 @@ def _getAveragedOperator(operator, averaged_channel, get_had_spat=False, get_had
         return None
     op_info = operator.operator_info.getBasicLapH()
     xml = op_info.long_xml()
-    # this is an element tree. Convert to string and print
     import xml.etree.ElementTree as ET
 
-    print(ET.tostring(xml, encoding="unicode"))
+    logging.debug(ET.tostring(xml, encoding="unicode"))
+
+    def _flavor_name(flavor):
+        try:
+            return NAME_MAP[flavor]
+        except KeyError:
+            logging.error(f"Unknown hadron flavor '{flavor}'; not present in NAME_MAP.")
+            raise
+
     if op_info.getNumberOfHadrons() == 1:
         obs_name = (
-            f"{NAME_MAP[op_info.getFlavor()]}-{op_info.getHadronSpatialType(1)}_{op_info.getHadronSpatialIdNumber(1)}"
+            f"{_flavor_name(op_info.getFlavor())}-{op_info.getHadronSpatialType(1)}_{op_info.getHadronSpatialIdNumber(1)}"
         )
         obs_id = 0
     else:
         obs_name = ""
         for had_num in range(1, op_info.getNumberOfHadrons() + 1):
-            had_name = NAME_MAP[op_info.getHadronFlavor(had_num)]
+            had_name = _flavor_name(op_info.getHadronFlavor(had_num))
             had_psq = (
                 op_info.getHadronXMomentum(had_num) ** 2
                 + op_info.getHadronYMomentum(had_num) ** 2
