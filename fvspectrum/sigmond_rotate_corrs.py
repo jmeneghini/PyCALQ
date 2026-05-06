@@ -61,6 +61,24 @@ rotate_corrs:                           #required
   tmax: 25                              #not required #default 25
   tmin: 2                               #not required #default 2
   used_averaged_bins: true              #not required #default true
+  improved_operators: []                #not required #default []
+  # Each entry defines one improved (rotated) operator. PyCALQ groups them by
+  # channel (parsed from `name`) and emits an <ImprovedOperators> block in the
+  # rotation task. All improved operators in the same channel must share the
+  # same basis terms (only coefficients differ), e.g.:
+  #   improved_operators:
+  #   - name: "isotriplet S=0 P=(0,0,0) A1gm_1 ROT 0"
+  #     terms:
+  #     - op: "pion P=(0,0,0) A1gm_1 SD_2"
+  #       coefficient: [0.114796830508, 0.00580797993666]
+  #     - op: "pion P=(0,0,0) A1gm_1 TDO_3"
+  #       coefficient: [-0.0301863620233, 0.00202193825284]
+  #   - name: "isotriplet S=0 P=(0,0,0) A1gm_1 ROT 1"
+  #     terms:
+  #     - op: "pion P=(0,0,0) A1gm_1 SD_2"
+  #       coefficient: [-0.377654245707, -0.1743465511]
+  #     - op: "pion P=(0,0,0) A1gm_1 TDO_3"
+  #       coefficient: [-0.133595585489, -0.0606088052331]
 """
 
 
@@ -123,6 +141,61 @@ class SigmondRotateCorrs:
     def sigmond_rotation_log(self, il):
         return os.path.join(self.proj_file_handler.log_dir(), f"sigmond_rotation_log-{il}.xml")
 
+    @staticmethod
+    def _format_coefficient(coeff):
+        if isinstance(coeff, str):
+            return coeff
+        if isinstance(coeff, (list, tuple)):
+            if len(coeff) == 1:
+                return f"({float(coeff[0])},0.0)"
+            if len(coeff) == 2:
+                return f"({float(coeff[0])},{float(coeff[1])})"
+            logging.critical(f"Improved-operator coefficient must be [real] or [real, imag]; got {coeff}")
+        return f"({float(coeff)},0.0)"
+
+    @staticmethod
+    def _parse_improved_operators(entries):
+        """Group improved-operator entries by channel into the format expected
+        by sigmond_scripts (one set per channel; each set is a list of flat
+        [name, term1, coeff1, ...] lists)."""
+        if not entries:
+            return {}
+
+        grouped = {}
+        for entry in entries:
+            try:
+                name = entry["name"]
+                terms = entry["terms"]
+            except (KeyError, TypeError):
+                logging.critical(f"Improved operator entry must have 'name' and 'terms': {entry}")
+
+            flat = [name]
+            for term in terms:
+                try:
+                    op_str = term["op"]
+                    coeff = term["coefficient"]
+                except (KeyError, TypeError):
+                    logging.critical(f"Improved operator term must have 'op' and 'coefficient': {term}")
+                flat.append(op_str)
+                flat.append(SigmondRotateCorrs._format_coefficient(coeff))
+
+            channel = operator.Operator(name).channel
+            grouped.setdefault(channel, []).append(flat)
+
+        # validate that all improved ops in a channel share the same basis terms
+        result = {}
+        for channel, op_list in grouped.items():
+            basis = [op_list[0][i] for i in range(1, len(op_list[0]), 2)]
+            for flat in op_list[1:]:
+                this_basis = [flat[i] for i in range(1, len(flat), 2)]
+                if this_basis != basis:
+                    logging.critical(
+                        f"Improved operators in channel {channel} have mismatched basis terms; "
+                        "all entries in a channel must share the same OpTerm operators."
+                    )
+            result[channel] = [op_list]
+        return result
+
     def __init__(self, task_name, proj_file_handler, general_configs, task_configs, sph):
         self.task_name = task_name
         self.proj_file_handler = proj_file_handler
@@ -157,6 +230,7 @@ class SigmondRotateCorrs:
             "omit_operators": [],
             "only_operators": [],
             "run_tag": "",
+            "improved_operators": [],
         }
         sigmond_util.update_params(self.other_params, task_configs)  # update other_params with task_params,
         # otherwise fill in missing task params
@@ -204,6 +278,13 @@ class SigmondRotateCorrs:
         task_configs["rotated_channels"] = []
         for channel in self.channels:
             task_configs["rotated_channels"].append(str(channel))
+
+        # parse improved-operator config into the per-channel format that
+        # sigmond_scripts.doCorrMatrixRotation expects via the `improved_ops`
+        # kwarg: {channel: [[ [op_name, term1, coeff1, ...], ... ]]}
+        self.improved_ops_by_channel = self._parse_improved_operators(
+            self.other_params["improved_operators"]
+        )
 
         # check pivot settings
         if self.other_params["pivot_type"] > 1 or self.other_params["pivot_type"] < 0:
@@ -324,6 +405,18 @@ class SigmondRotateCorrs:
 
                 sub_vev = sigmond_util.do_subtract_vev(channel, self.project_handler)
 
+                rotation_kwargs = dict(
+                    rotated_corrs_filename=self.rotated_corrs_file(
+                        not self.other_params["rotate_by_samplings"], repr(channel), il
+                    ),
+                    file_mode=wmode,
+                    pivot_filename=self.pivot_file(repr(channel), il),
+                    pivot_overwrite=overwrite,
+                )
+                channel_improved_ops = self.improved_ops_by_channel.get(channel)
+                if channel_improved_ops:
+                    rotation_kwargs["improved_ops"] = channel_improved_ops
+
                 task_input.doCorrMatrixRotation(
                     sigmond_info.PivotInfo(
                         pivot_string,
@@ -337,12 +430,7 @@ class SigmondRotateCorrs:
                     operator.Operator(channel.getRotatedOp()),
                     self.other_params["tmin"],
                     self.other_params["tmax"],
-                    rotated_corrs_filename=self.rotated_corrs_file(
-                        not self.other_params["rotate_by_samplings"], repr(channel), il
-                    ),
-                    file_mode=wmode,
-                    pivot_filename=self.pivot_file(repr(channel), il),
-                    pivot_overwrite=overwrite,
+                    **rotation_kwargs,
                 )
                 file_created = True
             task_inputs.append(task_input)
