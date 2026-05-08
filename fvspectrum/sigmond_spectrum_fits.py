@@ -404,6 +404,7 @@ class SigmondSpectrumFits:
                 "max_iterations": 2000,
                 "verbosity": "high",
             },
+            "cov_sampling_mode": None,
             "correlator_fits": [],
             "single_hadrons": {},
             "single_hadrons_ratio": {},
@@ -2795,6 +2796,7 @@ class SigmondSpectrumFits:
                         False,
                         sh_priors,
                         scat_info,
+                        self.other_params["cov_sampling_mode"],
                     )
                 else:
                     multi_exp_input = {}
@@ -2810,6 +2812,7 @@ class SigmondSpectrumFits:
                         self.project_handler.subtract_vev,
                         self.fit_log_file(intop),
                         False,
+                        self.other_params["cov_sampling_mode"],
                     )
             else:
                 nsamplings = self.project_handler.project_info.sampling_info.getNumberOfReSamplings(
@@ -3057,6 +3060,7 @@ class SigmondSpectrumFits:
                             True,
                             sh_priors,
                             scat_info[:],
+                            self.other_params["cov_sampling_mode"],
                         )
 
                     if results[channel][intop]["fits"][model]["info"] == None:

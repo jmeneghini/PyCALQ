@@ -410,6 +410,7 @@ def sigmond_fit(
     delete_samplings=False,
     sh_priors={},
     scat_info=[],
+    cov_sampling_mode=None,
 ):
 
     this_fit_info = fit_info.FitInfo(
@@ -436,6 +437,8 @@ def sigmond_fit(
         "sh_priors": sh_priors,
         "scattering_fit_info": scat_info,
     }
+    if cov_sampling_mode is not None:
+        fit_options["cov_sampling_mode"] = cov_sampling_mode
 
     if not fit_configs["ratio"] and not fit_configs["sim_fit"]:  # and not vary
         fittype = "TemporalCorrelatorFit"
@@ -627,6 +630,7 @@ def sigmond_multi_exp_fit(
     subvev,
     logfile,
     delete_samplings=False,
+    cov_sampling_mode=None,
 ):
 
     # minimizer info
@@ -635,6 +639,8 @@ def sigmond_multi_exp_fit(
         "minimizer_info": this_minimizer_info,
         "sampling_mode": sampling_info,
     }
+    if cov_sampling_mode is not None:
+        fit_options["cov_sampling_mode"] = cov_sampling_mode
 
     nlevels = 3
     max_chisqr = 1.5
