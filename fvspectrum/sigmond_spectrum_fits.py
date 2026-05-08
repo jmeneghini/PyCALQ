@@ -255,17 +255,30 @@ class SigmondSpectrumFits:
             f"{str(op).replace(' ','_')}_fit_input.xml",
         )
 
+    @property
+    def _fit_sampling_char(self):
+        if self.other_params["sampling_mode"]:
+            return "B" if self.other_params["sampling_mode"].lower().startswith("b") else "J"
+        return "B" if self.project_handler.project_info.sampling_info.isBootstrapMode() else "J"
+
+    @property
+    def _cov_sampling_char(self):
+        if self.other_params["cov_sampling_mode"]:
+            return "B" if self.other_params["cov_sampling_mode"].lower().startswith("b") else "J"
+        return self._fit_sampling_char
+
+    @property
+    def _fit_run_tag(self):
+        return self.other_params["run_tag"]
+
     # configures the directory of potential outputs
     def samplings_file(self, filetag, channel=None):
-        if self.project_handler.project_info.sampling_info.isJackknifeMode():
-            sampling_mode = "J"
-        else:
-            sampling_mode = "B"
+        sampling_mode = f"{self._fit_sampling_char}-csm{self._cov_sampling_char}"
         rotate_type = "SP"
         if self.other_params["pivot_type"]:
             rotate_type = "RP"
-        if self.other_params["run_tag"]:
-            filetag += "-" + self.other_params["run_tag"]
+        if self._fit_run_tag:
+            filetag += "-" + self._fit_run_tag
         return self.proj_files_handler.samplings_file(
             False,
             channel,
@@ -295,13 +308,10 @@ class SigmondSpectrumFits:
     # filename for file output with the parameter fit samplings  of the noninteracting correlator fits
     # in sigmond hdf5 format with naming scheme based on sigmond scripts
     def single_hadron_fit_params_file(self, channel=None):
-        if self.project_handler.project_info.sampling_info.isJackknifeMode():
-            sampling_mode = "J"
-        else:
-            sampling_mode = "B"
+        sampling_mode = f"{self._fit_sampling_char}-csm{self._cov_sampling_char}"
         run_tag = ""
-        if self.other_params["run_tag"]:
-            run_tag = "-" + self.other_params["run_tag"]
+        if self._fit_run_tag:
+            run_tag = "-" + self._fit_run_tag
         return self.proj_files_handler.samplings_file(
             False,
             channel,
@@ -318,13 +328,10 @@ class SigmondSpectrumFits:
     # estimates of spectrum chosen fits filename
     def spectrum_fit_estimates(self, type_tag=""):
         file_tag = "levels"
-        if self.other_params["run_tag"]:
-            file_tag = "-" + self.other_params["run_tag"]
+        if self._fit_run_tag:
+            file_tag = "-" + self._fit_run_tag
         rebin = self.project_handler.project_info.bins_info.getRebinFactor()
-        if self.project_handler.project_info.sampling_info.isJackknifeMode():
-            sampling_mode = "J-samplings"
-        else:
-            sampling_mode = "B-samplings"
+        sampling_mode = f"{self._fit_sampling_char}-csm{self._cov_sampling_char}-samplings"
         rotate_type = "SP"
         if self.other_params["pivot_type"]:
             rotate_type = "RP"
@@ -339,14 +346,14 @@ class SigmondSpectrumFits:
     def spectrum_tmin_estimates(self, type_tag=""):
         if type_tag:
             type_tag = "-" + type_tag
-        return self.proj_files_handler.estimates_file("tmin" + type_tag)
+        tmin_tag = "tmin"
+        if self._fit_run_tag:
+            tmin_tag += "-" + self._fit_run_tag
+        return self.proj_files_handler.estimates_file(tmin_tag + type_tag)
 
     # samplings file of operator overlaps
     def operator_overlaps_samplings(self, channel=None):
-        if self.project_handler.project_info.sampling_info.isJackknifeMode():
-            sampling_mode = "J"
-        else:
-            sampling_mode = "B"
+        sampling_mode = f"{self._fit_sampling_char}-csm{self._cov_sampling_char}"
         rotate_type = "SP"
         if self.other_params["pivot_type"]:
             rotate_type = "RP"
@@ -358,7 +365,7 @@ class SigmondSpectrumFits:
             self.tN,
             self.t0,
             self.tD,
-            self.other_params["run_tag"],
+            self._fit_run_tag,
         )
 
     def __init__(self, task_name, proj_files_handler, general_configs, task_configs, sph):
@@ -405,6 +412,7 @@ class SigmondSpectrumFits:
                 "verbosity": "high",
             },
             "cov_sampling_mode": None,
+            "sampling_mode": None,
             "correlator_fits": [],
             "single_hadrons": {},
             "single_hadrons_ratio": {},
@@ -2783,6 +2791,10 @@ class SigmondSpectrumFits:
             this_fit_input["model"] = fit_info.FitModel(this_fit_input["model"])
         try:
             if self.other_params["minimizer_info"]["minimizer"] == "lmder":
+                sampling_mode = (
+                    self.other_params["sampling_mode"]
+                    or self.project_handler.project_info.sampling_info.getSamplingMode()
+                )
                 if model != "multi-exp":
                     this_fit_info, these_fit_results, chisqr, qual, dof = sigmond_util.sigmond_fit(
                         task_input,
@@ -2790,7 +2802,7 @@ class SigmondSpectrumFits:
                         self.other_params["minimizer_info"],
                         this_fit_input,
                         self.mcobs_handler,
-                        self.project_handler.project_info.sampling_info.getSamplingMode(),
+                        sampling_mode,
                         self.project_handler.subtract_vev,
                         self.fit_log_file(intop),
                         False,
@@ -2808,7 +2820,7 @@ class SigmondSpectrumFits:
                         self.other_params["minimizer_info"],
                         multi_exp_input,
                         self.mcobs_handler,
-                        self.project_handler.project_info.sampling_info.getSamplingMode(),
+                        sampling_mode,
                         self.project_handler.subtract_vev,
                         self.fit_log_file(intop),
                         False,
@@ -3054,7 +3066,8 @@ class SigmondSpectrumFits:
                             self.other_params["minimizer_info"],
                             this_fit_config,
                             self.mcobs_handler,
-                            self.project_handler.project_info.sampling_info.getSamplingMode(),
+                            self.other_params["sampling_mode"]
+                            or self.project_handler.project_info.sampling_info.getSamplingMode(),
                             self.project_handler.subtract_vev,
                             "NA",
                             True,

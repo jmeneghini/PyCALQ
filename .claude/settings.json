@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -c \"import sigmond; help\\(sigmond.MCSamplingInfo\\)\")",
+      "Bash(python3 -c \"import sigmond; help\\(sigmond.Bootstrapper\\)\")",
+      "Bash(python3 -c \"import sigmond; import inspect; print\\(inspect.getfile\\(sigmond\\)\\)\")",
+      "Bash(grep -n \"CovMatCalcSamplingMode\\\\|cov_mat\\\\|covmat\\\\|CovMat\" /code_backup/lqcd/sigmond/src/sigmond/cpp/fitting/chisq_fit.h /code_backup/lqcd/sigmond/src/sigmond/cpp/fitting/chisq_tcorr.h /code_backup/lqcd/sigmond/src/sigmond/cpp/fitting/chisq_base.h 2>/dev/null | head -40)",
+      "Read(//code_backup/lqcd/sigmond/src/sigmond/cpp/fitting/**)",
+      "Bash(grep -n \"getCovMatCurrentSamplingMode\\\\|CovMatCalcSamplingMode\\\\|setCovMat\\\\|covmat_sampling\" /code_backup/lqcd/sigmond/src/sigmond/cpp/analysis/mcobs_handler.h | head -30)",
+      "Read(//code_backup/lqcd/sigmond/src/sigmond/cpp/analysis/**)",
+      "Bash(find /code_backup/lqcd/sigmond/src -name \"mcobs_handler.cc\" | xargs grep -n \"setCovMatToBootstrapMode\\\\|setCovMatToJackknife\\\\|Bootstrap\\\\|bootstrap\\\\|Bootstrapper\" 2>/dev/null | head -30)",
+      "Read(//code_backup/lqcd/sigmond/src/**)"
+    ]
+  }
+}
