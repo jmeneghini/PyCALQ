@@ -1,5 +1,6 @@
 import logging
-import os, glob
+import os
+import glob
 import yaml
 import tqdm
 from multiprocessing import Process
@@ -179,7 +180,7 @@ class SigmondPreviewCorrs:
         if self.other_params["plot"]:
             logging.info(f"Saving plots to directory {self.proj_file_handler.plot_dir()}...")
         else:
-            logging.info(f"No plots requested.")
+            logging.info("No plots requested.")
             return
 
         plh = ph.PlottingHandler()

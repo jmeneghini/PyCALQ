@@ -382,7 +382,7 @@ class SigmondAverageCorrs:
         if self.other_params["plot"]:
             logging.info(f"Saving plots to directory {self.proj_file_handler.plot_dir()}...")
         else:
-            logging.info(f"No plots requested.")
+            logging.info("No plots requested.")
             return
 
         # set up plotting handler
@@ -557,7 +557,7 @@ def _getOperatorsMap(operators, averaged_channel, get_had_spat=False, get_had_ir
         averaged_op = _getAveragedOperator(operator, averaged_channel, get_had_spat, get_had_irrep)
         if averaged_op in op_map:
             logging.critical(f"Conflicting operators {operator} and {op_map[averaged_op]}. Keys include {list(op_map.keys())}.")
-        elif averaged_op == None:
+        elif averaged_op is None:
             continue
 
         op_map[averaged_op] = operator

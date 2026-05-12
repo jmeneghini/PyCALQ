@@ -1,5 +1,6 @@
 import logging
-import os, glob
+import os
+import glob
 import pathlib
 
 import general.task_manager as tm
@@ -156,10 +157,10 @@ class ProjectDirectoryHandler:
         file_tag="",
     ):
         mom_key = ""
-        if mom != None:
+        if mom is not None:
             mom_key = f"-PSQ{mom}"
         diag_key = ""
-        if rotate_type != None and tN != None and t0 != None and tD != None:
+        if rotate_type is not None and tN is not None and t0 is not None and tD is not None:
             diag_key = f"-{rotate_type}-{tN}tN-{t0}t0-{tD}tD"
         if file_tag:
             file_tag = "_" + file_tag
@@ -230,7 +231,7 @@ class ProjectDirectoryHandler:
 
     # filename for latex pdf where all plots and relevant information is gathered
     def summary_file(self, mom=None):
-        if mom != None:
+        if mom is not None:
             return os.path.join(self.plot_dir(), f"{self.task_name}-PSQ{mom}_summary")  # add channel? project name?
         else:
             return os.path.join(self.plot_dir(), f"{self.task_name}_summary")  # add channel? project name?

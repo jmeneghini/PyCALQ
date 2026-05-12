@@ -4,7 +4,6 @@ import yaml
 import pandas as pd
 import numpy as np
 import h5py
-import xml.etree.ElementTree as ET
 from enum import Enum
 from ordered_set import OrderedSet
 import general.task_manager as tm
@@ -560,7 +559,7 @@ class SigmondSpectrumFits:
             self.project_handler.add_rotated_data(rotated_data_files)
 
             # get pivot file if one if not given -> need to fix for multiple rotations
-            if self.other_params["pivot_file"] == None:  #
+            if self.other_params["pivot_file"] is None:  #
                 self.other_params["pivot_file"] = self.proj_files_handler.pivot_file(
                     rotate_type,
                     self.tN,
@@ -718,7 +717,7 @@ class SigmondSpectrumFits:
                     else:
                         wmode = sigmond.WriteMode.Overwrite
 
-                    scattering_particle_key = sigmond_info.ScatteringParticle.create(hadron_string)
+                    sigmond_info.ScatteringParticle.create(hadron_string)
                     single_hadron_operators[sigmond_info.ScatteringParticle.create(hadron_string)] = operator.Operator(
                         self.other_params["single_hadrons"][single_hadron][sh_list_index]
                     )
@@ -785,7 +784,7 @@ class SigmondSpectrumFits:
                 # threads = []
                 # thread_index = 0
                 file_created = False
-                logging.info(f"Fitting spectrum...")
+                logging.info("Fitting spectrum...")
                 for channel in self.rchannels:
                     self.results[channel] = {}
                     operators = self.data_handler.getChannelOperators2(channel)  # collects rotated operators first
@@ -885,7 +884,7 @@ class SigmondSpectrumFits:
                                             for particle in non_interacting_level
                                         ]
                                         this_fit_input["non_interacting_level"] = non_interacting_level
-                                    except RuntimeError as err:
+                                    except RuntimeError:
                                         continue
 
                                 file = self.spectrum_fit_params_file(channel)
@@ -930,10 +929,10 @@ class SigmondSpectrumFits:
                 self.zmags = {}
                 self.assignment_certainty = {}
                 if self.other_params["compute_overlaps"]:
-                    logging.info(f"Computing overlaps...")
+                    logging.info("Computing overlaps...")
                     any_success = False
                     pivot_type = sigmond_util.get_pivot_type(self.other_params["pivot_file"])
-                    if pivot_type == None:
+                    if pivot_type is None:
                         logging.warning(
                             "Given file for pivot is not a pivot type. Skipping operator overlap calculation"
                         )
@@ -977,7 +976,7 @@ class SigmondSpectrumFits:
                                 pivoter.insertEnergyFitInfo(op.level, elab_obs_info)
                                 pivoter.insertAmplitudeFitInfo(op.level, amp_obs_info)
 
-                            before_reorder_ops = pivoter.getOperatorsPython()
+                            pivoter.getOperatorsPython()
                             if reorder:
                                 loghelper = sigmond.LogHelper()
                                 pivoter.reorderLevelsByFitEnergy(loghelper)
@@ -1121,10 +1120,11 @@ class SigmondSpectrumFits:
                                     energy_ref_tags.append(tag + "_ref")
                                 energy_tags += energy_ref_tags
 
-                            get_MCObsInfo = lambda obs_tag: sigmond.MCObsInfo(
-                                this_fit_info.obs_name,
-                                this_fit_info.obs_id(this_fit_info.num_params + Obs[obs_tag].value),
-                            )
+                            def get_MCObsInfo(obs_tag):
+                                return sigmond.MCObsInfo(
+                                                            this_fit_info.obs_name,
+                                                            this_fit_info.obs_id(this_fit_info.num_params + Obs[obs_tag].value),
+                                                        )
 
                             energy_obs_infos = {tag: get_MCObsInfo(tag) for tag in energy_tags}
 
@@ -1252,7 +1252,7 @@ class SigmondSpectrumFits:
             for particle, particle_info in self.single_hadron_info.items():
                 if particle in final_levels["single_hadrons"].keys():  # should always be, but just in case
                     # add new obs to sigmond file
-                    sigmond_obs_name = str(particle) + f"_elab"
+                    sigmond_obs_name = str(particle) + "_elab"
                     new_mcobs_info = sigmond.MCObsInfo(sigmond_obs_name, 0)
 
                     # Copy the sampling data to the new observable name
@@ -1600,7 +1600,7 @@ class SigmondSpectrumFits:
     def get_pivoter(self, channel):
         pivot_type = sigmond_util.get_pivot_type(self.other_params["pivot_file"])
 
-        if pivot_type == None:
+        if pivot_type is None:
             logging.warning(
                 "Given file for pivot is not a pivot type. Non-interacting single hadrons can not be calculated."
             )
@@ -1614,7 +1614,7 @@ class SigmondSpectrumFits:
         if self.other_params["plot"]:
             logging.info(f"Saving plots to directory {self.proj_files_handler.plot_dir()}...")
         else:
-            logging.info(f"No plots requested.")
+            logging.info("No plots requested.")
             return
 
         # sort channel order
@@ -2071,7 +2071,7 @@ class SigmondSpectrumFits:
                         r"$d^2$",
                         r"$\Lambda$",
                         "Level",
-                        rf"$E_{{\textup{{cm}}}}/E_{{latex_rest_mass}}$",
+                        r"$E_{\textup{cm}}/E_{latex_rest_mass}$",
                         r"$a_tE_{\textup{lab}}$",
                         r"$a_t\Delta E_{\textup{lab}}$",
                         "Fit Model",
@@ -2084,7 +2084,7 @@ class SigmondSpectrumFits:
                         r"$d^2$",
                         r"$\Lambda$",
                         "Level",
-                        rf"$E_{{\textup{{cm}}}}$",
+                        r"$E_{\textup{cm}}$",
                         r"$a_tE_{\textup{lab}}$",
                         r"$a_t\Delta E_{\textup{lab}}$",
                         "Fit Model",
@@ -2633,7 +2633,6 @@ class SigmondSpectrumFits:
 
         for param, setting in self.default_fit_params.items():
             if param not in fit_input:
-                sfit_input = setting
                 task_configs[fit_input_name][param] = setting
 
     # sets up tmin or tmax plot for fits that were done in parallel to the central correlator
@@ -3076,7 +3075,7 @@ class SigmondSpectrumFits:
                             self.other_params["cov_sampling_mode"],
                         )
 
-                    if results[channel][intop]["fits"][model]["info"] == None:
+                    if results[channel][intop]["fits"][model]["info"] is None:
                         results[channel][intop]["fits"][model]["info"] = this_fit_info
                     results[channel][intop]["fits"][model][i] = {
                         "estimates": these_fit_results,
@@ -3088,7 +3087,7 @@ class SigmondSpectrumFits:
                     tfitenergy_obs_info = sigmond.MCObsInfo("dummy", this_fit_info.energy_index)
                     delab_obs_info = sigmond.MCObsInfo("dummy", this_fit_info.num_params)
                     elab_obs_info = sigmond.MCObsInfo("dummy", this_fit_info.num_params + 1)
-                    ecm_obs_info = sigmond.MCObsInfo("dummy", this_fit_info.num_params + 2)
+                    sigmond.MCObsInfo("dummy", this_fit_info.num_params + 2)
 
                     if "non_interacting_level" in this_fit_input:
                         this_ni_level = this_fit_input["non_interacting_level"]
@@ -3171,10 +3170,10 @@ class SigmondSpectrumFits:
                     # else:
                     #     sigmond.doBoostBySamplings(self.mcobs_handler,elab_obs_info,intop.channel.psq,ecm_obs_info)
                     #     results[channel][intop]["fits"][model][i]["ecm"] = self.mcobs_handler.getEstimate(ecm_obs_info)
-                except ValueError as err:
+                except ValueError:
                     # print(f"ValueError: Tmin fit {i} for model {model} failed: {err}")
                     results[channel][intop]["fits"][model][i] = None
-                except RuntimeError as err:
+                except RuntimeError:
                     # print(f"RuntimeError: Tmin fit {i} for model {model} failed: {err}")
                     results[channel][intop]["fits"][model][i] = None
 
@@ -3187,7 +3186,7 @@ class SigmondSpectrumFits:
     def set_up_sim_fit(self, plot, model, scat_info, sh_priors, channel, intop):
         # setup priors
         pivot_type = sigmond_util.get_pivot_type(self.other_params["pivot_file"])
-        if pivot_type == None:
+        if pivot_type is None:
             logging.warning("Need pivot information in order to do Conspiracy fits")
             return False
         if str(channel) not in self.other_params["non_interacting_levels"]:

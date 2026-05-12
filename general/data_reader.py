@@ -13,9 +13,6 @@ import logging  # incorporate logging for errors
 
 # ends code when run logging.error(message) or logging.critical(message)
 # logging.warning(message) and logging.debug(message) won't end code but will output at certain verbosity settings
-import math  # math library, mostly use it for math.pi, math.pow()
-import numpy as np  # basic functions, linear algebra, etc.
-import os
 
 
 ############################################################################################
@@ -47,7 +44,7 @@ class LQCD_DATA_READER:
         if not file_path:
             logging.critical("Ensure file path is in project directory")
 
-        if isospin == None and strangeness == None:
+        if isospin is None and strangeness is None:
             self.channel = None
         else:
             strange_str = f"S{strangeness}"
@@ -68,7 +65,7 @@ class LQCD_DATA_READER:
         self.data = h5.File(self.file_path, "r")
 
         # check the channel name, retrieve if one is available
-        if self.channel == None:
+        if self.channel is None:
             available_channels = list(self.data.keys())
             available_channels.remove("single_hadrons")
             available_channels.remove("Info")
@@ -76,10 +73,10 @@ class LQCD_DATA_READER:
                 self.channel = available_channels[0]
             elif len(available_channels) > 1:
                 logging.critical(
-                    f"Too many channels in input file, please define a channel using 'isospin' and 'strangeness' parameters."
+                    "Too many channels in input file, please define a channel using 'isospin' and 'strangeness' parameters."
                 )
             else:
-                logging.critical(f"No channels available in input data file.")
+                logging.critical("No channels available in input data file.")
         else:
             if self.channel not in self.data.keys():
                 logging.critical(

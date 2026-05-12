@@ -6,8 +6,6 @@ import pylatex
 import os
 import logging
 import numpy as np
-import copy
-import cmath
 
 # import sigmond
 import fvspectrum.sigmond_util as sigmond_util
@@ -249,7 +247,7 @@ class PlottingHandler:
 
         tmin = fit_result_info["info"].tmin
         tmax = fit_result_info["info"].tmax
-        if new_trange != None:
+        if new_trange is not None:
             tmin = new_trange[0]
             tmax = new_trange[1]
 
@@ -429,7 +427,7 @@ class PlottingHandler:
         plt.legend()
 
     def ylim(self, ymin=None, ymax=None):
-        if ymin == None or ymax == None:
+        if ymin is None or ymax is None:
             return plt.ylim()
         else:
             return plt.ylim((ymin, ymax))
@@ -614,7 +612,8 @@ class PlottingHandler:
         plt.xlabel("rotate level")
         plt.ylabel("Certainty")
         # set xticks to have level #\n certainty
-        ni_level_str = lambda x: f"{x[0]}\n{x[1]}" if len(x) == 2 else f"{x[0]}"
+        def ni_level_str(x):
+            return f"{x[0]}\n{x[1]}" if len(x) == 2 else f"{x[0]}"
         plt.xticks(
             range(len(ni_levels)),
             [f"{i}\n{ni_level_str(ni_levels[i])}" for i in range(len(ni_levels))],

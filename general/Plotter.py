@@ -91,7 +91,7 @@ class Plotter:
         plt.ylim(0, 0.6)
         plt.xlim(-0.22, 0.05)
         # Customize the legend with custom handles (markers only)
-        legend = plt.legend(handles=legend_handles, loc="lower right", title="Legend", prop={"size": 12})
+        plt.legend(handles=legend_handles, loc="lower right", title="Legend", prop={"size": 12})
         # legend.set_title('Legend', prop={'size': 12})  # Set legend title and font size
 
         plt.show()
@@ -160,7 +160,7 @@ class Plotter:
         data_bs = np.loadtxt(results_file)
 
         # Extract the parameters (a_results and b_results) from the loaded data
-        a_results = data_bs[:, 0]
+        data_bs[:, 0]
         b_results = data_bs[:, 1]
 
         plt.figure(figsize=(8, 6))

@@ -1,6 +1,5 @@
 import logging
 import os
-import h5py
 import tqdm
 
 import sigmond
@@ -62,7 +61,7 @@ class SigmondProjectHandler:
         self.contains_averaged_data = False
         self.contains_rotated_data = False
 
-        default_nodes = nodes = os.cpu_count()
+        default_nodes = os.cpu_count()
         if shared:
             default_nodes /= 2
             default_nodes = int(default_nodes)

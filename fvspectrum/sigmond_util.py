@@ -8,7 +8,6 @@ from typing import NamedTuple
 import pandas as pd
 import numpy as np
 import scipy as sp
-import time
 import yaml
 from threading import Thread
 import contextlib
@@ -294,7 +293,7 @@ def get_mcobs_handlers(this_data_handler, project_info, additional_sampling_file
             flist = filename.xml()
             bl_corr_xml.insert(1, flist)
     if this_data_handler.raw_data_files.bl_vev_files or this_data_handler.averaged_data_files.bl_vev_files:
-        bl_vev_files_xml = ET.SubElement(mcobs_handler_init, "BLVEVData")
+        ET.SubElement(mcobs_handler_init, "BLVEVData")
         # file list info
     if (
         this_data_handler.raw_data_files.bin_files
@@ -467,10 +466,10 @@ def sigmond_fit(
             param = sigmond.MCObsInfo(name.text, int(index.text))
             mcobs_handler.eraseSamplings(param)
         if fit_configs["sim_fit"]:
-            task_xml.find(f"TaskSequence/Task/FinalEnergy/Name").text = "dummy"
-            task_xml.find(f"TaskSequence/Task/FinalEnergy/IDIndex").text = "0"
-            task_xml.find(f"TaskSequence/Task/FinalAmplitude/Name").text = "dummy"
-            task_xml.find(f"TaskSequence/Task/FinalAmplitude/IDIndex").text = "1"
+            task_xml.find("TaskSequence/Task/FinalEnergy/Name").text = "dummy"
+            task_xml.find("TaskSequence/Task/FinalEnergy/IDIndex").text = "0"
+            task_xml.find("TaskSequence/Task/FinalAmplitude/Name").text = "dummy"
+            task_xml.find("TaskSequence/Task/FinalAmplitude/IDIndex").text = "1"
 
     if fit_configs["ratio"]:
         # construct a "non-ratio" xml with ratio correlator as the fit correlator
@@ -733,10 +732,10 @@ def sigmond_multi_exp_fit(
                         param = sigmond.MCObsInfo(name.text, int(index.text))
                         mcobs_handler.eraseSamplings(param)
                     if fit_configs["sim_fit"]:
-                        task_xml.find(f"TaskSequence/Task/FinalEnergy/Name").text = "dummy"
-                        task_xml.find(f"TaskSequence/Task/FinalEnergy/IDIndex").text = "0"
-                        task_xml.find(f"TaskSequence/Task/FinalAmplitude/Name").text = "dummy"
-                        task_xml.find(f"TaskSequence/Task/FinalAmplitude/IDIndex").text = "1"
+                        task_xml.find("TaskSequence/Task/FinalEnergy/Name").text = "dummy"
+                        task_xml.find("TaskSequence/Task/FinalEnergy/IDIndex").text = "0"
+                        task_xml.find("TaskSequence/Task/FinalAmplitude/Name").text = "dummy"
+                        task_xml.find("TaskSequence/Task/FinalAmplitude/IDIndex").text = "1"
 
                 setuptaskhandler = sigmond.XMLHandler()
                 setuptaskhandler.set_from_string(task_input.to_str())
@@ -754,7 +753,7 @@ def sigmond_multi_exp_fit(
                     btmin = tmin
                     log_xml.seek_unique("ChiSquarePerDof")
                     bchisqr = float(log_xml.get_text_content())
-                except Exception as err:
+                except Exception:
                     continue
 
                 new_fit_result = best_fit_results[this_fit_info.energy_index]
@@ -1002,7 +1001,7 @@ def scipy_fit(
             )
             index = this_fit_info.num_params
             for i in range(scat_info[0].num_params):
-                if parameter_map[scat_info[0].operator][i] == None:
+                if parameter_map[scat_info[0].operator][i] is None:
                     parameter_map[scat_info[0].operator][i] = index
                     index += 1
         if this_fit_info.model == fit_info.FitModel.TwoExpConspiracy:
@@ -1038,7 +1037,7 @@ def scipy_fit(
             )
             index = this_fit_info.num_params
             for i in range(scat_info[i0].num_params):
-                if parameter_map[scat_info[i0].operator][i] == None:
+                if parameter_map[scat_info[i0].operator][i] is None:
                     parameter_map[scat_info[i0].operator][i] = index
                     index += 1
 
@@ -1052,7 +1051,7 @@ def scipy_fit(
                 this_fit_info.param_names.index("SqrtGapToThirdEnergy")
             )
             for i in range(scat_info[i1].num_params):
-                if parameter_map[scat_info[i1].operator][i] == None:
+                if parameter_map[scat_info[i1].operator][i] is None:
                     parameter_map[scat_info[i1].operator][i] = index
                     index += 1
 
@@ -1242,11 +1241,11 @@ def complete_one_fit(
         for ip in priors:
             sample_priors[ip]["Mean"] = np.random.normal(priors[ip]["Mean"], 2.0 * priors[ip]["Error"])
 
-        if threads[ithread] != None:
+        if threads[ithread] is not None:
             threads[ithread].join()
             if not sampling_res[thread_keys[ithread]].success:
                 for thread in threads:
-                    if thread != None:
+                    if thread is not None:
                         thread.join()
                 raise RuntimeError("Fit on the one of the samplings failed.")
 
@@ -1279,7 +1278,7 @@ def complete_one_fit(
         ithread = ithread % n_nodes
 
     for thread in threads:
-        if thread != None:
+        if thread is not None:
             thread.join()
 
     # save samples
@@ -1332,7 +1331,7 @@ def minimize_sample(
 
             initial_params_set = model[op].guessInitialParamValuesPy(this_op_datapoints, tvals[op])
             for i, ip in enumerate(parameter_map[op]):
-                if initial_params[ip] != None:
+                if initial_params[ip] is not None:
                     initial_params[ip] += initial_params_set[i]
                     initial_params[ip] /= 2.0
                 else:
@@ -1376,7 +1375,7 @@ def minimize_sample(
         options={"maxiter": this_minimizer_info.getMaximumIterations()},
     )
 
-    if comm != None:
+    if comm is not None:
         comm.send(res)
 
     results[index] = res
@@ -1526,7 +1525,7 @@ def filter_channels(task_configs, channel_list):
 # from estimates info, plot all correlators in operators matrix. If data is None, then
 # it assumed that the estimates are saved to file
 def write_channel_plots(operators, plh, create_pickles, create_pdfs, pdh, data=None):
-    saved_to_self = data != None
+    saved_to_self = data is not None
     for op1 in operators:
         for op2 in operators:
             corr = sigmond.CorrelatorInfo(op1.operator_info, op2.operator_info)
@@ -1553,7 +1552,7 @@ def write_channel_plots(operators, plh, create_pickles, create_pdfs, pdh, data=N
             plh.clf()
             try:
                 plh.correlator_plot(df, 0)  # , op1, op2) #0 for regular corr plot
-            except KeyError as err:
+            except KeyError:
                 logging.warning(f"No correlator estimates could be optained for {corr_name}.")
                 continue
 
@@ -1575,10 +1574,10 @@ def write_channel_plots(operators, plh, create_pickles, create_pdfs, pdh, data=N
                     plh.save_pickle(pdh.effen_plot_file(corr_name, "pickle"))
                 if create_pdfs:
                     plh.save_pdf(pdh.effen_plot_file(corr_name, "pdf"))
-            except pd.errors.EmptyDataError as err:
+            except pd.errors.EmptyDataError:
                 # logging.warning(f"No effective energy estimates could be optained for {corr_name}.")
                 pass
-            except KeyError as err:
+            except KeyError:
                 # logging.warning(f"No effective energy estimates could be optained for {corr_name}.")
                 pass
 

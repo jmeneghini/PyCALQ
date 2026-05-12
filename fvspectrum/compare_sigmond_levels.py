@@ -82,7 +82,7 @@ class CompareLevels:
             return
 
         self.energy_key = "ecm"
-        if self.other_params["reference_particle"] != None:
+        if self.other_params["reference_particle"] is not None:
             self.energy_key = "ecm_ref"
 
         default_plot_configs = {
@@ -476,15 +476,15 @@ class CompareLevels:
                                 & (df["momentum"] == mom)
                             ].iterrows():
                                 if (
-                                    not np.isnan(row[f"dElab value"])
+                                    not np.isnan(row["dElab value"])
                                     and row[levels_key] <= self.other_params["max_level"]
                                 ):
                                     irrep = row["irrep"]
                                     fit_level = row[levels_key]
                                     split_irreps.append((irrep, mom, fit_level))
                                     indexes.append(irreps[mom].index(irrep) + fit_level)
-                                    levels.append(row[f"dElab value"])
-                                    errs.append(row[f"dElab error"])
+                                    levels.append(row["dElab value"])
+                                    errs.append(row["dElab error"])
                                     nothing = False
                             if levels:
                                 plh.summary_plot(

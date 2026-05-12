@@ -289,7 +289,7 @@ class SigmondRotateCorrs:
         # check pivot settings
         if self.other_params["pivot_type"] > 1 or self.other_params["pivot_type"] < 0:
             logging.critical(
-                f"Parameter 'pivot_type' set to unknown pivot type, select 0 for single pivot, and 1 for rolling pivot."
+                "Parameter 'pivot_type' set to unknown pivot type, select 0 for single pivot, and 1 for rolling pivot."
             )
 
         # check plotting settings
@@ -353,13 +353,13 @@ class SigmondRotateCorrs:
             # loop through channels, set up sigmond input
             file_created = False
             for channel in channels:
-                if self.other_params["tmax"] == None and self.other_params["tmin"] == None:
+                if self.other_params["tmax"] is None and self.other_params["tmin"] is None:
                     self.other_params["tmin"], self.other_params["tmax"] = self.data_handler.getChannelsLargestTRange(
                         channel
                     )
-                elif self.other_params["tmax"] == None:
+                elif self.other_params["tmax"] is None:
                     _, self.other_params["tmax"] = self.data_handler.getChannelsLargestTRange(channel)
-                elif self.other_params["tmin"] == None:
+                elif self.other_params["tmin"] is None:
                     self.other_params["tmin"], _ = self.data_handler.getChannelsLargestTRange(channel)
 
                 if file_created:
@@ -644,7 +644,7 @@ class SigmondRotateCorrs:
         if self.other_params["plot"]:
             logging.info(f"Saving plots to directory {self.proj_file_handler.plot_dir()}...")
         else:
-            logging.info(f"No plots requested.")
+            logging.info("No plots requested.")
             return
 
         # set up plotting handler
@@ -682,7 +682,7 @@ class SigmondRotateCorrs:
         if self.other_params["create_summary"]:
             # generate summary
             plh.create_summary_doc("Rotated Correlators")
-            logging.info(f"\tGenerating summary document...")
+            logging.info("\tGenerating summary document...")
             for channel in self.channels:
                 plh.append_section(str(channel))
 
@@ -772,7 +772,7 @@ class SigmondRotateCorrs:
                         plh.save_pickle(self.proj_file_handler.effen_plot_file(corr_name, "pickle"))
                     if self.other_params["create_pdfs"] or self.other_params["create_summary"]:
                         plh.save_pdf(self.proj_file_handler.effen_plot_file(corr_name, "pdf"))
-                except FileNotFoundError as err:
+                except FileNotFoundError:
                     pass
-                except KeyError as err:
+                except KeyError:
                     pass
