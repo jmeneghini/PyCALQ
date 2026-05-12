@@ -8,10 +8,6 @@ This module provides the main CLI interface for PyCALQ, including:
 """
 import argparse
 import sys
-import csv
-import yaml
-import os
-import multiprocessing as mp
 
 # Import the main PyCALQ functionality
 # Defer heavy imports (e.g., sigmond) until needed by the 'run' command
@@ -44,6 +40,9 @@ def row_key(r):
 
 def estimates_to_fit_cfg(csv_path, output_path=None):
     """Convert estimates CSV to fit configuration YAML"""
+    import csv
+    import os
+
     if not os.path.exists(csv_path):
         raise FileNotFoundError(f"CSV file not found: {csv_path}")
 
@@ -72,6 +71,9 @@ def estimates_to_fit_cfg(csv_path, output_path=None):
 
 def parse_full_input_file(full_input_path):
     """Parse a full_input_X.yml file and extract general and task configurations"""
+    import os
+    import yaml
+
     if not os.path.exists(full_input_path):
         raise FileNotFoundError(f"Full input file not found: {full_input_path}")
 
@@ -136,6 +138,8 @@ def setup_parser():
 
 def set_multiprocessing_start_method():
     """Set the multiprocessing start method to 'fork' to get around Pybind11 pickling."""
+    import multiprocessing as mp
+
     required_method = "fork"
     if required_method in mp.get_all_start_methods():
         mp.set_start_method(required_method, force=True)
